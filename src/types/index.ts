@@ -31,6 +31,7 @@ export interface Category {
   description?: string;
   icon?: string;
   image_url?: string;
+  image_public_id?: string;
   sort_order: number;
 }
 
@@ -85,6 +86,23 @@ export interface Order {
   updated_at?: string;
 }
 
+export interface HeroSlide {
+  id: string;
+  image_url: string;
+  image_public_id?: string;
+  mobile_image_url?: string;
+  mobile_image_public_id?: string;
+  badge?: string;
+  title: string;
+  description: string;
+  cta_primary_text?: string;
+  cta_primary_link?: string;
+  cta_secondary_text?: string;
+  cta_secondary_link?: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface CMSHomeContent {
   announcement_bar: string;
   hero_badge: string;
@@ -94,6 +112,7 @@ export interface CMSHomeContent {
   hero_image_public_id?: string;
   hero_floating_badge_title: string;
   hero_floating_badge_desc: string;
+  hero_slides?: HeroSlide[];
   cta_primary_text: string;
   cta_primary_link: string;
   cta_secondary_text: string;
@@ -133,4 +152,3 @@ export interface UserProfile {
   phone?: string;
   avatar_url?: string;
 }
-

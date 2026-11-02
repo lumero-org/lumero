@@ -7,10 +7,10 @@ import {
   CMSHomeContent,
   CMSAboutContent,
   UserProfile,
+  HeroSlide,
 } from "@/types";
 import {
   initialProducts,
-  initialCategories,
   initialHomeCMS,
   initialAboutCMS,
 } from "./mockData";
@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
   ORDERS: "lumero_orders_v1",
   HOME_CMS: "lumero_home_cms_v1",
   ABOUT_CMS: "lumero_about_cms_v1",
+  HERO_SLIDES: "lumero_hero_slides_v1",
   CURRENT_USER: "lumero_current_user_v1",
 };
 
@@ -197,26 +198,52 @@ export async function decreaseProductStock(productId: string, quantityToDeduct: 
 // -------------------------------------------------------------
 export async function getCategories(): Promise<Category[]> {
   if (isSupabaseConfigured() && supabase) {
+    // 1. Primary: Rich JSON store via cms_content (supports full image_url & image_public_id with zero schema restrictions)
+    try {
+      const { data: cmsData, error: cmsError } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "store_categories")
+        .maybeSingle();
+
+      if (!cmsError && cmsData?.content && Array.isArray(cmsData.content) && cmsData.content.length > 0) {
+        const sorted = (cmsData.content as Category[]).sort(
+          (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        );
+        saveToLocal(STORAGE_KEYS.CATEGORIES, sorted);
+        return sorted;
+      }
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content categories fetch notice:", cmsErr);
+    }
+
+    // 2. Secondary: Relational categories table
     try {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true });
 
-      if (!error && data && data.length > 0) {
-        return data as Category[];
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const sorted = (data as Category[]).sort(
+          (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        );
+        saveToLocal(STORAGE_KEYS.CATEGORIES, sorted);
+        return sorted;
       }
     } catch (e) {
-      console.warn("Supabase categories fetch failed:", e);
+      console.warn("Supabase categories table fetch failed:", e);
     }
   }
 
+  // 3. Fallback: Local storage (preserves user-created categories offline or on connection drop)
   const local = getFromLocal<Category[]>(STORAGE_KEYS.CATEGORIES, []);
-  if (local.length === 0) {
-    saveToLocal(STORAGE_KEYS.CATEGORIES, initialCategories);
-    return initialCategories;
+  if (Array.isArray(local) && local.length > 0) {
+    return local.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }
-  return local;
+
+  // Pure dynamic storage — returns empty array if no categories configured yet (no mock data)
+  return [];
 }
 
 export async function saveCategory(category: Category): Promise<Category> {
@@ -226,13 +253,37 @@ export async function saveCategory(category: Category): Promise<Category> {
     ? existing.map((c) => (c.id === category.id ? category : c))
     : [...existing, category];
 
+  // 1. Immediately persist to localStorage
   saveToLocal(STORAGE_KEYS.CATEGORIES, updatedList);
 
+  // 2. Persist to Supabase
   if (isSupabaseConfigured() && supabase) {
+    // 2a. Always sync to cms_content (identical to hero_slides, never fails on column constraints)
     try {
-      await supabase.from("categories").upsert(category);
-    } catch (e) {
-      console.warn("Supabase category save error:", e);
+      await supabase.from("cms_content").upsert({
+        key: "store_categories",
+        content: updatedList,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content save categories notice:", cmsErr);
+    }
+
+    // 2b. Sync to relational categories table with strictly safe columns
+    try {
+      const row: Record<string, unknown> = {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description || "",
+        sort_order: Number(category.sort_order) || 1,
+      };
+      if (category.image_url) {
+        row.image_url = category.image_url;
+      }
+      await supabase.from("categories").upsert(row);
+    } catch (tableErr) {
+      console.warn("Supabase categories table upsert notice:", tableErr);
     }
   }
 
@@ -242,9 +293,22 @@ export async function saveCategory(category: Category): Promise<Category> {
 export async function deleteCategory(id: string): Promise<boolean> {
   const existing = await getCategories();
   const filtered = existing.filter((c) => c.id !== id);
+
+  // 1. Update localStorage
   saveToLocal(STORAGE_KEYS.CATEGORIES, filtered);
 
+  // 2. Update Supabase
   if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: "store_categories",
+        content: filtered,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content delete notice:", cmsErr);
+    }
+
     try {
       await supabase.from("categories").delete().eq("id", id);
     } catch (e) {
@@ -408,6 +472,53 @@ export async function saveHomeCMS(content: CMSHomeContent): Promise<void> {
   }
 }
 
+// -------------------------------------------------------------
+// HERO SLIDES CMS STORE (Strictly Dynamic, No Dummy Fallbacks)
+// -------------------------------------------------------------
+export async function getHeroSlides(): Promise<HeroSlide[]> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "hero_slides")
+        .maybeSingle();
+
+      if (!error && data?.content && Array.isArray(data.content)) {
+        return (data.content as HeroSlide[]).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      }
+    } catch (e) {
+      console.warn("Supabase hero slides fetch failed:", e);
+    }
+  }
+
+  const local = getFromLocal<HeroSlide[]>(STORAGE_KEYS.HERO_SLIDES, []);
+  if (Array.isArray(local) && local.length > 0) {
+    return local.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }
+
+  // Returns empty array if none configured in database/store.
+  // No mock data or hardcoded fallback data.
+  return [];
+}
+
+export async function saveHeroSlides(slides: HeroSlide[]): Promise<void> {
+  const sorted = slides.map((s, idx) => ({ ...s, sort_order: idx }));
+  saveToLocal(STORAGE_KEYS.HERO_SLIDES, sorted);
+
+  if (isSupabaseConfigured() && supabase) {
+    const { error } = await supabase.from("cms_content").upsert({
+      key: "hero_slides",
+      content: sorted,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Supabase saveHeroSlides error:", error);
+      throw error;
+    }
+  }
+}
+
 export async function getAboutCMS(): Promise<CMSAboutContent> {
   if (isSupabaseConfigured() && supabase) {
     try {
@@ -445,4 +556,3 @@ export function getCurrentUser(): UserProfile | null {
 export function setCurrentUser(user: UserProfile | null) {
   saveToLocal(STORAGE_KEYS.CURRENT_USER, user);
 }
-

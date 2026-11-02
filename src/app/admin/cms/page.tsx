@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
-  FileEdit,
   Save,
   Home,
   BookOpen,
-  Sparkles,
   Plus,
   Trash2,
-  ExternalLink,
+  Sliders,
+  ArrowRight,
 } from "lucide-react";
 import {
   getHomeCMS,
@@ -20,10 +20,11 @@ import {
 import { CMSHomeContent, CMSAboutContent } from "@/types";
 import { initialHomeCMS, initialAboutCMS } from "@/lib/mockData";
 import { CloudinaryUploader } from "@/components/ui/CloudinaryUploader";
+import { HeroSlidesManager } from "@/components/admin/HeroSlidesManager";
 import { toast } from "sonner";
 
 export default function AdminCMSPage() {
-  const [activeTab, setActiveTab] = useState<"home" | "about">("home");
+  const [activeTab, setActiveTab] = useState<"hero" | "home" | "about">("hero");
 
   const [homeCMS, setHomeCMS] = useState<CMSHomeContent>(initialHomeCMS);
   const [aboutCMS, setAboutCMS] = useState<CMSAboutContent>(initialAboutCMS);
@@ -44,7 +45,7 @@ export default function AdminCMSPage() {
     try {
       await saveHomeCMS(homeCMS);
       toast.success("Home Page Content Updated", {
-        description: "Homepage hero, announcement bar and features are now published.",
+        description: "Announcement bar, features and newsletter settings saved.",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Save failed";
@@ -81,12 +82,24 @@ export default function AdminCMSPage() {
             Storefront CMS
           </h1>
           <p className="text-xs text-stone-500">
-            Live editorial control for the Home and About pages.
+            Live editorial control for the Hero Slider, Home settings, and About pages.
           </p>
         </div>
 
         {/* Tab switch */}
         <div className="flex rounded-2xl bg-white p-1 border border-stone-200 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("hero")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
+              activeTab === "hero"
+                ? "bg-stone-950 text-white shadow-xs font-semibold"
+                : "text-stone-600 hover:text-stone-950"
+            }`}
+          >
+            <Sliders className="h-3.5 w-3.5" />
+            <span>Hero Slider</span>
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab("home")}
@@ -97,7 +110,7 @@ export default function AdminCMSPage() {
             }`}
           >
             <Home className="h-3.5 w-3.5" />
-            <span>Home Page</span>
+            <span>Site &amp; Features</span>
           </button>
           <button
             type="button"
@@ -114,9 +127,34 @@ export default function AdminCMSPage() {
         </div>
       </div>
 
-      {/* HOME CMS TAB */}
+      {/* HERO SLIDER CMS TAB */}
+      {activeTab === "hero" && <HeroSlidesManager />}
+
+      {/* SITE & FEATURES CMS TAB */}
       {activeTab === "home" && (
         <form onSubmit={handleSaveHome} className="space-y-6">
+          {/* Shop by Category Management Section Link */}
+          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+                Home Page Section
+              </span>
+              <h3 className="font-serif text-base font-medium text-stone-900 mt-0.5">
+                Shop by Category Section
+              </h3>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Upload category images, customize category names, and manage storefront ordering.
+              </p>
+            </div>
+            <Link
+              href="/admin/categories"
+              className="inline-flex items-center gap-2 rounded-full bg-stone-950 px-5 py-2 text-xs font-semibold text-white uppercase tracking-wider hover:bg-stone-800 transition shadow-xs shrink-0"
+            >
+              <span>Manage Categories &amp; Images</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
           {/* Announcement Bar */}
           <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
@@ -137,111 +175,54 @@ export default function AdminCMSPage() {
             </div>
           </div>
 
-          {/* Hero Section Content */}
+          {/* Features Section */}
           <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
-              Hero Section Headline & Narrative
+              &quot;Why Choose Lumero&quot; Features
             </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Eyebrow Tag
-                </label>
-                <input
-                  type="text"
-                  value={homeCMS.hero_badge}
-                  onChange={(e) =>
-                    setHomeCMS({ ...homeCMS, hero_badge: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Main Headline
-                </label>
-                <input
-                  type="text"
-                  value={homeCMS.hero_title}
-                  onChange={(e) =>
-                    setHomeCMS({ ...homeCMS, hero_title: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Hero Subtext
-                </label>
-                <textarea
-                  rows={2}
-                  value={homeCMS.hero_subtitle}
-                  onChange={(e) =>
-                    setHomeCMS({ ...homeCMS, hero_subtitle: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Primary CTA Label
-                </label>
-                <input
-                  type="text"
-                  value={homeCMS.cta_primary_text}
-                  onChange={(e) =>
-                    setHomeCMS({ ...homeCMS, cta_primary_text: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Secondary CTA Label
-                </label>
-                <input
-                  type="text"
-                  value={homeCMS.cta_secondary_text}
-                  onChange={(e) =>
-                    setHomeCMS({ ...homeCMS, cta_secondary_text: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-            </div>
-
-            {/* Hero Image (Uncompressed as required) */}
-            <div className="pt-2">
-              <label className="block text-xs font-medium text-stone-700 mb-2">
-                Hero Showcase Banner (Uploaded to Cloudinary uncompressed)
-              </label>
-              <CloudinaryUploader
-                images={
-                  homeCMS.hero_image
-                    ? [
-                        {
-                          url: homeCMS.hero_image,
-                          public_id: homeCMS.hero_image_public_id || "hero_image",
-                        },
-                      ]
-                    : []
-                }
-                onChange={(imgs) => {
-                  setHomeCMS({
-                    ...homeCMS,
-                    hero_image: imgs[0]?.url || "",
-                    hero_image_public_id: imgs[0]?.public_id,
-                  });
-                }}
-                maxImages={1}
-                isProduct={false}
-                folder="lumero/cms"
-              />
+              {homeCMS.features?.map((f, idx) => (
+                <div key={idx} className="rounded-xl border border-stone-200 p-3.5 bg-stone-50/50 space-y-2">
+                  <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
+                    Feature #{idx + 1}
+                  </span>
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Icon"
+                      value={f.icon}
+                      onChange={(e) => {
+                        const updated = [...(homeCMS.features || [])];
+                        updated[idx] = { ...updated[idx], icon: e.target.value };
+                        setHomeCMS({ ...homeCMS, features: updated });
+                      }}
+                      className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-center"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Title"
+                      value={f.title}
+                      onChange={(e) => {
+                        const updated = [...(homeCMS.features || [])];
+                        updated[idx] = { ...updated[idx], title: e.target.value };
+                        setHomeCMS({ ...homeCMS, features: updated });
+                      }}
+                      className="col-span-3 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium"
+                    />
+                  </div>
+                  <textarea
+                    rows={2}
+                    placeholder="Description"
+                    value={f.description}
+                    onChange={(e) => {
+                      const updated = [...(homeCMS.features || [])];
+                      updated[idx] = { ...updated[idx], description: e.target.value };
+                      setHomeCMS({ ...homeCMS, features: updated });
+                    }}
+                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -263,7 +244,7 @@ export default function AdminCMSPage() {
         <form onSubmit={handleSaveAbout} className="space-y-6">
           <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
-              About Page Narrative & Vision
+              About Page Narrative &amp; Vision
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -438,4 +419,3 @@ export default function AdminCMSPage() {
     </div>
   );
 }
-

@@ -141,7 +141,9 @@ alter table public.order_items enable row level security;
 create policy "Order items viewable by order owner or admin" on public.order_items for select using (true);
 create policy "Anyone can insert order items" on public.order_items for insert with check (true);
 
--- 6. CMS CONTENT TABLE (For Home, About page dynamic edits)
+-- 6. CMS CONTENT TABLE (For Home, About page dynamic edits & Hero Slider)
+-- Hero slides are stored as key = 'hero_slides' with content as jsonb array:
+-- [ { id, image_url, image_public_id, badge, title, description, cta_primary_text, cta_primary_link, cta_secondary_text, cta_secondary_link, is_active, sort_order } ]
 create table if not exists public.cms_content (
   key text primary key,
   content jsonb not null,
@@ -150,7 +152,7 @@ create table if not exists public.cms_content (
 
 alter table public.cms_content enable row level security;
 create policy "CMS content viewable by everyone" on public.cms_content for select using (true);
-create policy "Admin can update CMS content" on public.cms_content for insert with check (true);
+create policy "Admin can insert CMS content" on public.cms_content for insert with check (true);
 create policy "Admin can update existing CMS content" on public.cms_content for update using (true);
 
 -- 7. FUNCTION & TRIGGER: Decrease product stock on order
@@ -163,4 +165,3 @@ begin
   where id = p_product_id;
 end;
 $$;
-
