@@ -48,6 +48,22 @@ export default function AdminOrdersPage() {
       toast.success("Order Status Updated", {
         description: `Order updated to ${newStatus.toUpperCase()}`,
       });
+
+      // If status changed to Shipped, dispatch Brevo shipping notification email (idempotent)
+      if (newStatus === "shipped") {
+        const orderObj = orders.find((o) => o.id === orderId) || selectedOrder;
+        if (orderObj) {
+          fetch("/api/email/order-shipped", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              order: { ...orderObj, order_status: "shipped" },
+              courierName: "Blue Dart / Delhivery Express",
+            }),
+          }).catch((err) => console.warn("Shipping email notice:", err));
+        }
+      }
+
       await loadData();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder((prev) => (prev ? { ...prev, order_status: newStatus } : null));

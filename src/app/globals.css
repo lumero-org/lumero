@@ -28,3 +28,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #A8A29E;
 }
+
+/* Continuous smooth right-to-left marquee ticker */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 22s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation-duration: 40s;
+  }
+}
+

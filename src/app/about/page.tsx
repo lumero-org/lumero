@@ -4,17 +4,28 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Compass, Shield, Heart, Sparkles } from "lucide-react";
-import { getAboutCMS } from "@/lib/store";
-import { CMSAboutContent } from "@/types";
+import { getAboutCMS, getWhyChooseSection } from "@/lib/store";
+import { CMSAboutContent, WhyChooseSection } from "@/types";
 import { initialAboutCMS } from "@/lib/mockData";
+import { WhyChooseLumero } from "@/components/about/WhyChooseLumero";
 
 export default function AboutPage() {
   const [cms, setCms] = useState<CMSAboutContent>(initialAboutCMS);
+  const [whyChooseData, setWhyChooseData] = useState<WhyChooseSection | null>(null);
+  const [isLoadingWhyChoose, setIsLoadingWhyChoose] = useState(true);
 
   useEffect(() => {
     getAboutCMS().then((content) => {
       if (content) setCms(content);
     });
+
+    getWhyChooseSection()
+      .then((data) => {
+        setWhyChooseData(data);
+      })
+      .finally(() => {
+        setIsLoadingWhyChoose(false);
+      });
   }, []);
 
   const philosophyIcons = [
@@ -27,28 +38,28 @@ export default function AboutPage() {
   return (
     <div className="pb-24">
       {/* Editorial Header */}
-      <section className="relative pt-12 pb-16 sm:pt-20 sm:pb-24 overflow-hidden border-b border-stone-200">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+      <section className="relative pt-8 pb-10 sm:pt-14 sm:pb-16 overflow-hidden border-b border-stone-200">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center space-y-3">
+          <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
             {cms.badge || "OUR STORY"}
           </span>
 
-          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-normal text-stone-950 tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-normal text-stone-950 tracking-tight">
             {cms.headline || "Modern spaces. Better living."}
           </h1>
 
-          <p className="font-serif text-xl sm:text-2xl text-stone-600 font-light italic max-w-2xl mx-auto">
+          <p className="font-serif text-sm sm:text-base text-stone-600 font-light italic max-w-xl mx-auto">
             &quot;{cms.subheadline || "At LUMERO, we believe that the spaces we live in should reflect who we are."}&quot;
           </p>
         </div>
       </section>
 
       {/* Narrative & Visual Grid */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Brand Photo */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          {/* Brand Photo (Reduced & restrained size) */}
           <div className="lg:col-span-6 relative">
-            <div className="relative aspect-4/5 w-full overflow-hidden rounded-3xl bg-stone-200 shadow-xl border border-stone-200">
+            <div className="relative aspect-square sm:aspect-4/5 max-w-md mx-auto max-h-[380px] sm:max-h-[440px] w-full overflow-hidden rounded-3xl bg-stone-200 shadow-lg border border-stone-200">
               <Image
                 src={
                   cms.banner_image ||
@@ -58,39 +69,39 @@ export default function AboutPage() {
                 fill
                 priority
                 className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
+                sizes="(max-width: 1024px) 100vw, 45vw"
               />
               <div className="absolute inset-0 bg-stone-900/10" />
             </div>
 
             {/* Architectural caption pill */}
-            <div className="absolute -bottom-6 -right-6 hidden sm:block max-w-xs rounded-2xl bg-white/95 backdrop-blur-md p-5 border border-stone-200 shadow-xl">
-              <p className="font-serif text-xs italic text-stone-800">
+            <div className="absolute -bottom-4 -right-2 hidden sm:block max-w-xs rounded-2xl bg-white/95 backdrop-blur-md p-4 border border-stone-200 shadow-lg">
+              <p className="font-serif text-[11px] italic text-stone-800">
                 &quot;Details aren&apos;t just details. They make the design.&quot;
               </p>
-              <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-wider text-amber-800">
                 Lumero Design Studio
               </span>
             </div>
           </div>
 
-          {/* Narrative Content */}
-          <div className="lg:col-span-6 space-y-6">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-stone-400">
+          {/* Narrative Content (Reduced typography scale) */}
+          <div className="lg:col-span-6 space-y-4">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400 block">
               The Vision Behind LUMERO
             </span>
 
-            <div className="space-y-4 text-stone-700 leading-relaxed font-light text-base sm:text-lg">
+            <div className="space-y-3 text-stone-600 leading-relaxed font-light text-xs sm:text-sm">
               {cms.story_paragraphs?.map((para, idx) => (
                 <p key={idx}>{para}</p>
               ))}
             </div>
 
-            <div className="pt-4 border-t border-stone-200">
-              <h4 className="font-serif text-lg font-medium text-stone-950">
+            <div className="pt-3 border-t border-stone-200">
+              <h4 className="font-serif text-sm sm:text-base font-medium text-stone-950">
                 {cms.vision_title || "Thoughtful Form. Everyday Soul."}
               </h4>
-              <p className="mt-1 text-sm text-stone-600">
+              <p className="mt-1 text-xs text-stone-500 leading-relaxed font-light">
                 {cms.vision_text ||
                   "We curate designs where gentle tactile textures meet quiet geometry. Every item in our catalog is engineered to bring visual calm and functional satisfaction to modern living."}
               </p>
@@ -99,34 +110,34 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Our Philosophy Grid (4 pillars from prompt) */}
-      <section className="bg-white border-y border-stone-200 py-20">
+      {/* Our Philosophy Grid (4 pillars) */}
+      <section className="bg-white border-y border-stone-200 py-12 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-2 mb-14">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-stone-400">
+          <div className="text-center space-y-1.5 mb-10">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
               Guiding Principles
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-stone-950">
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-stone-950">
               Our Philosophy
             </h2>
-            <p className="text-sm text-stone-500 max-w-md mx-auto">
+            <p className="text-xs text-stone-500 max-w-md mx-auto">
               Four timeless cornerstones behind every piece we create and select.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {(cms.philosophy_items || initialAboutCMS.philosophy_items).map((item, idx) => (
               <div
                 key={idx}
-                className="flex flex-col rounded-2xl border border-stone-200/80 bg-[#FAF8F5] p-6 shadow-2xs hover:shadow-md transition hover:border-stone-400"
+                className="flex flex-col rounded-2xl border border-stone-200/80 bg-[#FAF8F5] p-5 shadow-2xs hover:shadow-md transition hover:border-stone-400"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-2xs mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-2xs mb-3">
                   {philosophyIcons[idx % philosophyIcons.length]}
                 </div>
-                <h3 className="font-serif text-lg font-medium text-stone-900">
+                <h3 className="font-serif text-sm sm:text-base font-medium text-stone-900">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-xs sm:text-sm text-stone-600 leading-relaxed font-light">
+                <p className="mt-1.5 text-xs text-stone-600 leading-relaxed font-light">
                   {item.description}
                 </p>
               </div>
@@ -134,6 +145,9 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* WHY CHOOSE LUMERO SECTION (Relocated to About page with premium accordion & featured image) */}
+      <WhyChooseLumero data={whyChooseData} isLoading={isLoadingWhyChoose} />
 
       {/* Final Statement & CTA */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-20 text-center space-y-6">
@@ -162,4 +176,3 @@ export default function AboutPage() {
     </div>
   );
 }
-

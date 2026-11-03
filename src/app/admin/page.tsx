@@ -138,6 +138,72 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Quick Access to Key Sections */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Link
+          href="/admin/cms"
+          className="rounded-2xl bg-white p-5 border border-stone-200/90 shadow-2xs hover:shadow-md transition group flex flex-col justify-between"
+        >
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+              Promotional Banner
+            </span>
+            <h4 className="font-serif text-base font-medium text-stone-900 mt-1 group-hover:text-amber-900 transition-colors">
+              Offer Section
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Update background image, headline, and CTA navigation.
+            </p>
+          </div>
+          <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-stone-900">
+            <span>Manage Offer</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/cms"
+          className="rounded-2xl bg-white p-5 border border-stone-200/90 shadow-2xs hover:shadow-md transition group flex flex-col justify-between"
+        >
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+              About Page
+            </span>
+            <h4 className="font-serif text-base font-medium text-stone-900 mt-1 group-hover:text-amber-900 transition-colors">
+              Why Choose Lumero
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Manage accordion items, featured photo, and sort ordering.
+            </p>
+          </div>
+          <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-stone-900">
+            <span>Manage Accordions</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/categories"
+          className="rounded-2xl bg-white p-5 border border-stone-200/90 shadow-2xs hover:shadow-md transition group flex flex-col justify-between"
+        >
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+              Curated Collections
+            </span>
+            <h4 className="font-serif text-base font-medium text-stone-900 mt-1 group-hover:text-amber-900 transition-colors">
+              Store Categories
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Add new categories, upload cover imagery, and reorder.
+            </p>
+          </div>
+          <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-stone-900">
+            <span>Manage Categories</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+      </div>
+
       {/* Low Stock Alerts Banner if any */}
       {lowStockProducts.length > 0 && (
         <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

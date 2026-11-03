@@ -141,9 +141,14 @@ alter table public.order_items enable row level security;
 create policy "Order items viewable by order owner or admin" on public.order_items for select using (true);
 create policy "Anyone can insert order items" on public.order_items for insert with check (true);
 
--- 6. CMS CONTENT TABLE (For Home, About page dynamic edits & Hero Slider)
--- Hero slides are stored as key = 'hero_slides' with content as jsonb array:
--- [ { id, image_url, image_public_id, badge, title, description, cta_primary_text, cta_primary_link, cta_secondary_text, cta_secondary_link, is_active, sort_order } ]
+-- 6. CMS CONTENT TABLE (For Home, About page dynamic edits, Hero Slider, Offer Banner & Why Choose Lumero)
+-- Keys stored:
+--   - 'hero_slides': [ { id, image_url, image_public_id, badge, title, description, cta_primary_text, cta_primary_link, cta_secondary_text, cta_secondary_link, is_active, sort_order } ]
+--   - 'offer_banner': { image_url, image_public_id, subtitle, heading, description, button_text, button_link, is_active }
+--   - 'why_choose_lumero': { image_url, image_public_id, subtitle, title, items: [ { id, title, description, sort_order } ] }
+--   - 'store_categories': Category[] array with custom sort orders
+--   - 'home': CMSHomeContent
+--   - 'about': CMSAboutContent
 create table if not exists public.cms_content (
   key text primary key,
   content jsonb not null,

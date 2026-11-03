@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
+const razorpayKeyId =
+  process.env.RAZORPAY_KEY_ID ||
+  process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+  "";
 const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "";
 
 const isRazorpayConfigured = Boolean(

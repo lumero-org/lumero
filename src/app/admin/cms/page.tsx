@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Save,
@@ -10,6 +10,10 @@ import {
   Trash2,
   Sliders,
   ArrowRight,
+  Megaphone,
+  CheckCircle2,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   getHomeCMS,
@@ -21,14 +25,63 @@ import { CMSHomeContent, CMSAboutContent } from "@/types";
 import { initialHomeCMS, initialAboutCMS } from "@/lib/mockData";
 import { CloudinaryUploader } from "@/components/ui/CloudinaryUploader";
 import { HeroSlidesManager } from "@/components/admin/HeroSlidesManager";
+import { OfferSectionManager } from "@/components/admin/OfferSectionManager";
+import { WhyChooseManager } from "@/components/admin/WhyChooseManager";
 import { toast } from "sonner";
 
+const CMS_SECTIONS = [
+  {
+    id: "hero" as const,
+    label: "Hero Slider",
+    icon: Sliders,
+    description: "Carousel slides, photos, order & timing",
+  },
+  {
+    id: "offer" as const,
+    label: "Offer Banner",
+    icon: Megaphone,
+    description: "Curated living promotional section",
+  },
+  {
+    id: "why-choose" as const,
+    label: "Why Choose Lumero",
+    icon: CheckCircle2,
+    description: "Craftsmanship pillars & brand values",
+  },
+  {
+    id: "home" as const,
+    label: "Announcement",
+    icon: Home,
+    description: "Storefront header announcement bar",
+  },
+  {
+    id: "about" as const,
+    label: "About Story",
+    icon: BookOpen,
+    description: "Brand narrative, quote & vision",
+  },
+];
+
 export default function AdminCMSPage() {
-  const [activeTab, setActiveTab] = useState<"hero" | "home" | "about">("hero");
+  const [activeTab, setActiveTab] = useState<
+    "hero" | "offer" | "why-choose" | "home" | "about"
+  >("hero");
 
   const [homeCMS, setHomeCMS] = useState<CMSHomeContent>(initialHomeCMS);
   const [aboutCMS, setAboutCMS] = useState<CMSAboutContent>(initialAboutCMS);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -45,7 +98,7 @@ export default function AdminCMSPage() {
     try {
       await saveHomeCMS(homeCMS);
       toast.success("Home Page Content Updated", {
-        description: "Announcement bar, features and newsletter settings saved.",
+        description: "Announcement bar and site settings saved.",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Save failed";
@@ -73,68 +126,129 @@ export default function AdminCMSPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-800">
             Content Management System
           </span>
           <h1 className="font-serif text-2xl sm:text-3xl font-normal text-stone-950 mt-0.5">
-            Storefront CMS
+            Storefront CMS &amp; Sections
           </h1>
           <p className="text-xs text-stone-500">
-            Live editorial control for the Hero Slider, Home settings, and About pages.
+            Full dynamic control over the Hero Slider, Promotional Offer Banner, Why Choose Lumero, and Site Narratives.
           </p>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex rounded-2xl bg-white p-1 border border-stone-200 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("hero")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
-              activeTab === "hero"
-                ? "bg-stone-950 text-white shadow-xs font-semibold"
-                : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            <Sliders className="h-3.5 w-3.5" />
-            <span>Hero Slider</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("home")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
-              activeTab === "home"
-                ? "bg-stone-950 text-white shadow-xs font-semibold"
-                : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            <Home className="h-3.5 w-3.5" />
-            <span>Site &amp; Features</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("about")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
-              activeTab === "about"
-                ? "bg-stone-950 text-white shadow-xs font-semibold"
-                : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>About Page</span>
-          </button>
+        {/* CMS Sections Dropdown Selector */}
+        <div className="relative shrink-0" ref={dropdownRef}>
+          {(() => {
+            const currentSection =
+              CMS_SECTIONS.find((s) => s.id === activeTab) || CMS_SECTIONS[0];
+            const CurrentIcon = currentSection.icon;
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2.5 border border-stone-200/90 shadow-2xs hover:border-stone-400 transition text-xs text-stone-900 min-w-[240px] justify-between cursor-pointer"
+                  aria-expanded={isDropdownOpen}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1.5 rounded-xl bg-stone-900 text-white shadow-2xs">
+                      <CurrentIcon className="h-4 w-4" />
+                    </span>
+                    <div className="text-left">
+                      <span className="block text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                        CMS Section
+                      </span>
+                      <span className="font-serif font-medium text-sm text-stone-950">
+                        {currentSection.label}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-stone-400 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-stone-200/90 shadow-xl p-1.5 z-40 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-800 border-b border-stone-100 mb-1">
+                      Choose Section to Edit
+                    </div>
+                    <div className="space-y-1">
+                      {CMS_SECTIONS.map((section) => {
+                        const Icon = section.icon;
+                        const isSelected = activeTab === section.id;
+                        return (
+                          <button
+                            key={section.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(section.id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left transition cursor-pointer ${
+                              isSelected
+                                ? "bg-stone-950 text-white font-medium shadow-xs"
+                                : "text-stone-700 hover:bg-stone-100/80"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className={`p-1.5 rounded-lg shrink-0 ${
+                                  isSelected
+                                    ? "bg-white/20 text-white"
+                                    : "bg-stone-100 text-stone-700"
+                                }`}
+                              >
+                                <Icon className="h-4 w-4" />
+                              </span>
+                              <div className="min-w-0">
+                                <span className="block text-xs font-serif truncate">
+                                  {section.label}
+                                </span>
+                                <span
+                                  className={`block text-[10px] truncate ${
+                                    isSelected ? "text-stone-300" : "text-stone-400"
+                                  }`}
+                                >
+                                  {section.description}
+                                </span>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <Check className="h-4 w-4 shrink-0 text-amber-400" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
-      {/* HERO SLIDER CMS TAB */}
+      {/* 1. HERO SLIDER CMS TAB */}
       {activeTab === "hero" && <HeroSlidesManager />}
 
-      {/* SITE & FEATURES CMS TAB */}
+      {/* 2. OFFER BANNER CMS TAB */}
+      {activeTab === "offer" && <OfferSectionManager />}
+
+      {/* 3. WHY CHOOSE LUMERO CMS TAB */}
+      {activeTab === "why-choose" && <WhyChooseManager />}
+
+      {/* 4. ANNOUNCEMENT & SITE CMS TAB */}
       {activeTab === "home" && (
         <form onSubmit={handleSaveHome} className="space-y-6">
           {/* Shop by Category Management Section Link */}
-          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800">
                 Home Page Section
@@ -156,13 +270,13 @@ export default function AdminCMSPage() {
           </div>
 
           {/* Announcement Bar */}
-          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/80 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
               Top Announcement Bar
             </h3>
             <div>
-              <label className="block text-xs font-medium text-stone-700 mb-1">
-                Banner Message (Appears sticky across all pages)
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Banner Message (Appears sticky across all storefront pages)
               </label>
               <input
                 type="text"
@@ -175,81 +289,30 @@ export default function AdminCMSPage() {
             </div>
           </div>
 
-          {/* Features Section */}
-          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
-            <h3 className="font-serif text-base font-medium text-stone-900">
-              &quot;Why Choose Lumero&quot; Features
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {homeCMS.features?.map((f, idx) => (
-                <div key={idx} className="rounded-xl border border-stone-200 p-3.5 bg-stone-50/50 space-y-2">
-                  <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
-                    Feature #{idx + 1}
-                  </span>
-                  <div className="grid grid-cols-4 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Icon"
-                      value={f.icon}
-                      onChange={(e) => {
-                        const updated = [...(homeCMS.features || [])];
-                        updated[idx] = { ...updated[idx], icon: e.target.value };
-                        setHomeCMS({ ...homeCMS, features: updated });
-                      }}
-                      className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-center"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Title"
-                      value={f.title}
-                      onChange={(e) => {
-                        const updated = [...(homeCMS.features || [])];
-                        updated[idx] = { ...updated[idx], title: e.target.value };
-                        setHomeCMS({ ...homeCMS, features: updated });
-                      }}
-                      className="col-span-3 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium"
-                    />
-                  </div>
-                  <textarea
-                    rows={2}
-                    placeholder="Description"
-                    value={f.description}
-                    onChange={(e) => {
-                      const updated = [...(homeCMS.features || [])];
-                      updated[idx] = { ...updated[idx], description: e.target.value };
-                      setHomeCMS({ ...homeCMS, features: updated });
-                    }}
-                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center gap-2 rounded-full bg-stone-950 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 transition shadow-md"
+              className="flex items-center gap-2 rounded-full bg-stone-950 px-8 py-3.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 transition shadow-md disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              <span>{isSaving ? "Saving..." : "Save Home Content"}</span>
+              <span>{isSaving ? "Saving..." : "Save Settings"}</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* ABOUT CMS TAB */}
+      {/* 5. ABOUT CMS TAB */}
       {activeTab === "about" && (
         <form onSubmit={handleSaveAbout} className="space-y-6">
-          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/80 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
               About Page Narrative &amp; Vision
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
                   Tag
                 </label>
                 <input
@@ -263,7 +326,7 @@ export default function AdminCMSPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
                   Main Title
                 </label>
                 <input
@@ -277,7 +340,7 @@ export default function AdminCMSPage() {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-stone-700 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
                   Subheadline / Quote
                 </label>
                 <input
@@ -293,7 +356,7 @@ export default function AdminCMSPage() {
 
             {/* Story Paragraphs */}
             <div className="pt-2 space-y-2">
-              <label className="block text-xs font-medium text-stone-700">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
                 Story Paragraphs
               </label>
               {aboutCMS.story_paragraphs.map((para, i) => (
@@ -336,10 +399,10 @@ export default function AdminCMSPage() {
               </button>
             </div>
 
-            {/* About Banner Photo (Uncompressed) */}
+            {/* About Banner Photo */}
             <div className="pt-2">
-              <label className="block text-xs font-medium text-stone-700 mb-2">
-                Brand Banner Photo (Cloudinary upload without compression)
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2">
+                Brand Banner Photo (Cloudinary)
               </label>
               <CloudinaryUploader
                 images={
@@ -367,13 +430,13 @@ export default function AdminCMSPage() {
           </div>
 
           {/* Philosophy Pillars (4 Items) */}
-          <div className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/80 shadow-2xs space-y-4">
             <h3 className="font-serif text-base font-medium text-stone-900">
               The 4 Philosophy Pillars
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {aboutCMS.philosophy_items.map((item, idx) => (
-                <div key={idx} className="rounded-xl border border-stone-200 p-3.5 bg-stone-50/50 space-y-2">
+                <div key={idx} className="rounded-2xl border border-stone-200 p-4 bg-[#FAF8F5]/60 space-y-2">
                   <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
                     Pillar #{idx + 1}
                   </span>
@@ -386,7 +449,7 @@ export default function AdminCMSPage() {
                       setAboutCMS({ ...aboutCMS, philosophy_items: updated });
                     }}
                     placeholder="Pillar Title"
-                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium"
+                    className="w-full rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium"
                   />
                   <textarea
                     rows={2}
@@ -397,7 +460,7 @@ export default function AdminCMSPage() {
                       setAboutCMS({ ...aboutCMS, philosophy_items: updated });
                     }}
                     placeholder="Description"
-                    className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs"
+                    className="w-full rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs"
                   />
                 </div>
               ))}
@@ -408,7 +471,7 @@ export default function AdminCMSPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center gap-2 rounded-full bg-stone-950 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 transition shadow-md"
+              className="flex items-center gap-2 rounded-full bg-stone-950 px-8 py-3.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 transition shadow-md disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               <span>{isSaving ? "Saving..." : "Save About Content"}</span>

@@ -4,7 +4,6 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { StorefrontShell } from "@/components/layout/StorefrontShell";
-import { Toaster } from "sonner";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -30,25 +29,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${jakarta.variable} scroll-smooth`}>
-      <body className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans antialiased flex flex-col selection:bg-stone-900 selection:text-white">
+    <html
+      lang="en"
+      className={`${playfair.variable} ${jakarta.variable} scroll-smooth`}
+      suppressHydrationWarning
+    >
+      <body
+        className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans antialiased flex flex-col selection:bg-stone-900 selection:text-white"
+        suppressHydrationWarning
+      >
         <AuthProvider>
           <CartProvider>
-            {/* Top-Right Corner Toaster (Sonner) */}
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              theme="light"
-              toastOptions={{
-                style: {
-                  borderRadius: "1rem",
-                  border: "1px solid #E7E5E4",
-                  fontFamily: "var(--font-sans)",
-                },
-              }}
-            />
-
             <StorefrontShell>{children}</StorefrontShell>
           </CartProvider>
         </AuthProvider>

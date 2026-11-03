@@ -14,9 +14,10 @@ import {
   RotateCcw,
   Check,
   ChevronRight,
+  ChevronLeft,
   Sparkles,
 } from "lucide-react";
-import { getProductBySlug, getProducts } from "@/lib/store";
+import { getProductBySlug, getProducts, getAdminWhatsAppNumber } from "@/lib/store";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { ProductCard } from "@/components/products/ProductCard";
@@ -33,6 +34,36 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"specs" | "materials" | "shipping">("specs");
   const [isLoading, setIsLoading] = useState(true);
+
+  // Touch Swipe Gesture Tracking for Mobile Image Gallery
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+
+  const minSwipeDistance = 45;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX || !touchEndX || images.length <= 1) return;
+    const distance = touchStartX - touchEndX;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setSelectedImageIndex((prev) => (prev + 1) % images.length);
+    } else if (isRightSwipe) {
+      setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
 
   useEffect(() => {
     async function load() {
@@ -57,11 +88,52 @@ export default function ProductDetailPage() {
     setQuantity(1);
   }, [slug]);
 
+  // Luxury Skeleton Loader for Product Details
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-        <div className="h-8 w-8 mx-auto animate-spin rounded-full border-2 border-stone-900 border-t-transparent" />
-        <p className="mt-4 font-serif text-stone-500">Curating product details...</p>
+      <div className="pb-24">
+        {/* Breadcrumb skeleton */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
+          <div className="h-4 w-44 bg-stone-200/80 rounded-md animate-pulse" />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            {/* Gallery Skeleton */}
+            <div className="lg:col-span-6 flex flex-col-reverse sm:flex-row gap-3.5 max-w-lg mx-auto w-full">
+              <div className="flex sm:flex-col gap-2.5 overflow-hidden">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-14 w-14 sm:h-16 sm:w-16 rounded-xl bg-stone-200/80 animate-pulse shrink-0" />
+                ))}
+              </div>
+              <div className="flex-1 aspect-square max-h-[440px] sm:max-h-[480px] rounded-3xl bg-stone-200/80 animate-pulse border border-stone-200/60" />
+            </div>
+
+            {/* Details Skeleton */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="h-5 w-24 bg-stone-200/80 rounded-full animate-pulse" />
+              <div className="space-y-2.5">
+                <div className="h-8 w-4/5 bg-stone-200/80 rounded-lg animate-pulse" />
+                <div className="h-8 w-2/3 bg-stone-200/80 rounded-lg animate-pulse" />
+              </div>
+              <div className="h-7 w-32 bg-stone-200/80 rounded-md animate-pulse" />
+              <div className="space-y-2 pt-2">
+                <div className="h-4 w-full bg-stone-200/70 rounded animate-pulse" />
+                <div className="h-4 w-5/6 bg-stone-200/70 rounded animate-pulse" />
+                <div className="h-4 w-2/3 bg-stone-200/70 rounded animate-pulse" />
+              </div>
+              <div className="flex items-center gap-4 pt-4">
+                <div className="h-11 w-28 bg-stone-200/80 rounded-xl animate-pulse" />
+                <div className="h-11 flex-1 bg-stone-200/80 rounded-xl animate-pulse" />
+              </div>
+              <div className="pt-6 border-t border-stone-200 grid grid-cols-3 gap-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 rounded-xl bg-stone-200/70 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -95,6 +167,19 @@ export default function ProductDetailPage() {
     router.push("/checkout");
   };
 
+  const handleWhatsAppOrder = async () => {
+    const configuredPhone = await getAdminWhatsAppNumber();
+    const adminPhone = configuredPhone.replace(/\D/g, "") || "919876543210";
+    const totalPrice = (product.price * quantity).toLocaleString("en-IN");
+    const currentUrl = typeof window !== "undefined" ? window.location.href : "";
+
+    const message = `Hello LUMERO,\n\nI would like to place an order for:\n• *Product:* ${product.name}\n• *Quantity:* ${quantity}\n• *Price:* ₹${totalPrice}\n• *Product Link:* ${currentUrl}\n\nPlease confirm availability and payment details. Thank you!`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const waUrl = `https://wa.me/${adminPhone}?text=${encodedMessage}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="pb-24">
       {/* Breadcrumb */}
@@ -107,18 +192,18 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
-          {/* LEFT: Image Gallery (Up to 5 images with luxury layout & interactive thumbnails) */}
-          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          {/* LEFT: Image Gallery (Decreased, balanced size with interactive thumbnails) */}
+          <div className="lg:col-span-6 flex flex-col-reverse sm:flex-row gap-3.5 max-w-lg mx-auto w-full">
             {/* Thumbnails (vertical on desktop, horizontal on mobile) */}
             {images.length > 1 && (
-              <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto max-h-[560px] pb-2 sm:pb-0 scrollbar-none shrink-0">
+              <div className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-y-auto max-h-[460px] pb-2 sm:pb-0 scrollbar-none shrink-0">
                 {images.slice(0, 5).map((img, idx) => (
                   <button
                     key={img.public_id || idx}
                     type="button"
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`relative h-18 w-18 sm:h-20 sm:w-20 rounded-xl overflow-hidden border-2 transition shrink-0 bg-stone-100 ${
+                    className={`relative h-14 w-14 sm:h-16 sm:w-16 rounded-xl overflow-hidden border-2 transition shrink-0 bg-stone-100 ${
                       selectedImageIndex === idx
                         ? "border-stone-950 shadow-md ring-1 ring-stone-950/20"
                         : "border-stone-200 hover:border-stone-400 opacity-70 hover:opacity-100"
@@ -135,19 +220,24 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Main Stage Image */}
-            <div className="relative flex-1 aspect-square sm:aspect-4/5 overflow-hidden rounded-3xl bg-stone-100 border border-stone-200/90 shadow-md group">
+            {/* Main Stage Image (Compact, restrained size with touch swipe support) */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="relative flex-1 aspect-square max-h-[440px] sm:max-h-[480px] overflow-hidden rounded-3xl bg-stone-100 border border-stone-200/90 shadow-md group touch-pan-y select-none"
+            >
               <Image
                 src={currentImage}
                 alt={product.name}
                 fill
                 priority
-                className="object-cover transition duration-700 group-hover:scale-105"
-                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover transition duration-500 group-hover:scale-105 pointer-events-none"
+                sizes="(max-width: 1024px) 100vw, 45vw"
               />
 
               {/* Badges on main image */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
                 {isOutOfStock ? (
                   <span className="rounded-full bg-stone-900/95 backdrop-blur-xs px-3 py-1 text-xs font-medium text-white shadow-sm">
                     Sold Out
@@ -166,7 +256,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* RIGHT: Product Details & Purchase Form */}
-          <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+          <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
             <div>
               {/* Category & Tags */}
               <div className="flex items-center justify-between">
@@ -204,40 +294,6 @@ export default function ProductDetailPage() {
               <p className="mt-1 text-[11px] text-stone-500">
                 Inclusive of all taxes. Free shipping on orders over ₹1,999.
               </p>
-
-              {/* Stock Meter */}
-              <div className="mt-6 rounded-2xl bg-stone-100/70 p-4 border border-stone-200">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-stone-700">Availability</span>
-                  <span
-                    className={
-                      isOutOfStock
-                        ? "text-rose-600 font-semibold"
-                        : isLowStock
-                        ? "text-amber-700 font-semibold animate-pulse"
-                        : "text-emerald-700 font-semibold"
-                    }
-                  >
-                    {isOutOfStock
-                      ? "Currently Out of Stock"
-                      : isLowStock
-                      ? `Hurry! Only ${product.stock_quantity} left to order`
-                      : `${product.stock_quantity} units ready for immediate dispatch`}
-                  </span>
-                </div>
-                {/* Visual stock bar */}
-                <div className="mt-2 h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isOutOfStock
-                        ? "bg-stone-300 w-0"
-                        : isLowStock
-                        ? "bg-amber-500 w-1/4"
-                        : "bg-emerald-600 w-3/4"
-                    }`}
-                  />
-                </div>
-              </div>
 
               {/* Description */}
               <div className="mt-6">
@@ -280,23 +336,36 @@ export default function ProductDetailPage() {
                     </span>
                   </div>
 
-                  {/* Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product, quantity)}
-                      className="flex items-center justify-center gap-2 rounded-full border border-stone-900 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wider text-stone-900 hover:bg-stone-50 transition shadow-xs"
-                    >
-                      <ShoppingBag className="h-4 w-4" />
-                      <span>Add to Bag</span>
-                    </button>
+                  {/* Buttons: Add to Bag & Order on WhatsApp on the same line, Large Buy Now button below */}
+                  <div className="space-y-3 pt-2">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product, quantity)}
+                        className="flex items-center justify-center gap-2 rounded-full border border-stone-900 bg-white px-3 sm:px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-900 hover:bg-stone-50 active:scale-98 transition shadow-xs"
+                      >
+                        <ShoppingBag className="h-4 w-4 shrink-0" />
+                        <span className="truncate">Add to Bag</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleWhatsAppOrder}
+                        className="flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#20ba5a] active:scale-98 text-white px-3 sm:px-5 py-3.5 text-xs font-semibold uppercase tracking-wider transition shadow-xs"
+                      >
+                        <svg className="h-4 w-4 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.301-.15-1.782-.879-2.058-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.201-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.5-1.787-1.676-2.088-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.201-.301.301-.501.1-.201.05-.376-.025-.527-.075-.15-.677-1.632-.928-2.235-.245-.589-.494-.509-.677-.518-.175-.008-.376-.01-.577-.01-.2 0-.527.075-.802.376-.276.301-1.053 1.028-1.053 2.508s1.079 2.909 1.229 3.11c.15.201 2.122 3.24 5.141 4.544.718.31 1.279.495 1.716.634.721.229 1.377.197 1.896.119.579-.087 1.782-.728 2.033-1.431.251-.703.251-1.305.175-1.431-.075-.126-.276-.201-.577-.351zM12.04 2C6.516 2 2.028 6.485 2.028 12c0 1.954.56 3.778 1.53 5.323L2 22l4.823-1.508C8.307 21.378 10.117 22 12.04 22c5.525 0 10.013-4.485 10.013-10S17.565 2 12.04 2z" />
+                        </svg>
+                        <span className="truncate">WhatsApp Order</span>
+                      </button>
+                    </div>
 
                     <button
                       type="button"
                       onClick={handleBuyNow}
-                      className="flex items-center justify-center gap-2 rounded-full bg-stone-950 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 transition shadow-md"
+                      className="w-full flex items-center justify-center gap-2 rounded-full bg-stone-950 px-6 py-4 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white hover:bg-stone-800 active:scale-98 transition shadow-md"
                     >
-                      <Zap className="h-4 w-4 text-amber-400" />
+                      <Zap className="h-4 w-4 fill-amber-400 text-amber-400" />
                       <span>Buy Now</span>
                     </button>
                   </div>

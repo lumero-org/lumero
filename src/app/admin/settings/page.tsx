@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Settings,
   ShieldCheck,
@@ -11,8 +11,10 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getAdminWhatsAppNumber, saveAdminWhatsAppNumber } from "@/lib/store";
 
 export default function AdminSettingsPage() {
   const [storeSettings, setStoreSettings] = useState({
@@ -21,13 +23,31 @@ export default function AdminSettingsPage() {
     freeShippingThreshold: 1999,
     supportEmail: "care@lumerodecor.com",
     supportPhone: "+91 98765 43210",
+    adminWhatsApp: "+91 98765 43210",
   });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Settings Saved", {
-      description: "Store defaults and logistics thresholds updated.",
+  useEffect(() => {
+    getAdminWhatsAppNumber().then((phone) => {
+      if (phone) {
+        setStoreSettings((prev) => ({ ...prev, adminWhatsApp: phone }));
+      }
     });
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await saveAdminWhatsAppNumber(storeSettings.adminWhatsApp);
+      toast.success("Settings Saved", {
+        description: "Store WhatsApp order destination & logistics updated.",
+      });
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -109,15 +129,41 @@ export default function AdminSettingsPage() {
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
                 />
               </div>
+
+              {/* Store WhatsApp Orders Destination */}
+              <div className="sm:col-span-2 pt-2 border-t border-stone-100">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-medium text-stone-900 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#25D366]" />
+                    <span>Admin WhatsApp Number (Customer Orders Destination)</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Active for Product WhatsApp Orders
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="+91 98765 43210"
+                  value={storeSettings.adminWhatsApp}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, adminWhatsApp: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs text-stone-900 focus:border-stone-950 focus:ring-1 focus:ring-stone-950 focus:outline-hidden shadow-2xs font-mono"
+                />
+                <p className="mt-1.5 text-[11px] text-stone-500 leading-relaxed">
+                  When a customer clicks <strong>&quot;WhatsApp Order&quot;</strong> on any product page, their selected quantity, price, and product link are automatically sent directly to this WhatsApp number.
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end pt-3 border-t border-stone-200">
               <button
                 type="submit"
-                className="flex items-center gap-2 rounded-full bg-stone-950 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 shadow-xs"
+                disabled={isSaving}
+                className="flex items-center gap-2 rounded-full bg-stone-950 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 shadow-xs disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
-                <span>Save Changes</span>
+                <span>{isSaving ? "Saving..." : "Save Changes"}</span>
               </button>
             </div>
           </form>

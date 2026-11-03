@@ -35,7 +35,7 @@ export function HeroSection({
 
     timerRef.current = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % displaySlides.length);
-    }, 5500);
+    }, 4500);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);

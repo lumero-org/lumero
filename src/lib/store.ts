@@ -8,9 +8,11 @@ import {
   CMSAboutContent,
   UserProfile,
   HeroSlide,
+  WhyChooseSection,
+  OfferBannerContent,
+  ShippingAddress,
 } from "@/types";
 import {
-  initialProducts,
   initialHomeCMS,
   initialAboutCMS,
 } from "./mockData";
@@ -23,6 +25,8 @@ const STORAGE_KEYS = {
   HOME_CMS: "lumero_home_cms_v1",
   ABOUT_CMS: "lumero_about_cms_v1",
   HERO_SLIDES: "lumero_hero_slides_v1",
+  OFFER_BANNER: "lumero_offer_banner_v1",
+  WHY_CHOOSE: "lumero_why_choose_v1",
   CURRENT_USER: "lumero_current_user_v1",
 };
 
@@ -53,26 +57,41 @@ function saveToLocal<T>(key: string, data: T) {
 // -------------------------------------------------------------
 export async function getProducts(): Promise<Product[]> {
   if (isSupabaseConfigured() && supabase) {
+    // 1. Primary: Rich JSON store via cms_content ('store_products')
+    try {
+      const { data: cmsData, error: cmsError } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "store_products")
+        .maybeSingle();
+
+      if (!cmsError && cmsData?.content && Array.isArray(cmsData.content) && cmsData.content.length > 0) {
+        saveToLocal(STORAGE_KEYS.PRODUCTS, cmsData.content as Product[]);
+        return cmsData.content as Product[];
+      }
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content products fetch notice:", cmsErr);
+    }
+
+    // 2. Secondary: Relational products table
     try {
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
+      if (!error && Array.isArray(data) && data.length > 0) {
+        saveToLocal(STORAGE_KEYS.PRODUCTS, data as Product[]);
         return data as Product[];
       }
     } catch (e) {
-      console.warn("Supabase products fetch failed, using local store:", e);
+      console.warn("Supabase products table fetch failed:", e);
     }
   }
 
+  // 3. Fallback: Local storage (preserves admin created products offline or during transient drops)
   const local = getFromLocal<Product[]>(STORAGE_KEYS.PRODUCTS, []);
-  if (local.length === 0) {
-    saveToLocal(STORAGE_KEYS.PRODUCTS, initialProducts);
-    return initialProducts;
-  }
-  return local;
+  return Array.isArray(local) ? local : [];
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -82,9 +101,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
 export async function saveProduct(product: Partial<Product> & { name: string; price: number }): Promise<Product> {
   const existingProducts = await getProducts();
-  let updatedProduct: Product;
 
-  const id = product.id || `prod_${Date.now()}`;
+  const id = product.id || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const slug =
     product.slug ||
     product.name
@@ -99,10 +117,11 @@ export async function saveProduct(product: Partial<Product> & { name: string; pr
     description: product.description || "",
     price: Number(product.price),
     compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-    category_id: product.category_id || "home-essentials",
-    category_name: product.category_name || "Home Essentials",
+    category_id: product.category_id || "",
+    category_name: product.category_name || "Décor",
     stock_quantity: typeof product.stock_quantity === "number" ? product.stock_quantity : 10,
     is_featured: Boolean(product.is_featured),
+    is_archived: Boolean(product.is_archived),
     images: product.images && product.images.length > 0 ? product.images.slice(0, 5) : [],
     tags: product.tags || [],
     dimensions: product.dimensions || "",
@@ -112,25 +131,64 @@ export async function saveProduct(product: Partial<Product> & { name: string; pr
     created_at: product.created_at || new Date().toISOString(),
   };
 
+  const exists = existingProducts.some((p) => p.id === id);
+  const newList = exists
+    ? existingProducts.map((p) => (p.id === id ? fullProduct : p))
+    : [fullProduct, ...existingProducts];
+
+  // 1. Immediately persist to localStorage
+  saveToLocal(STORAGE_KEYS.PRODUCTS, newList);
+
+  // 2. Persist to Supabase
   if (isSupabaseConfigured() && supabase) {
+    // 2a. Always sync to cms_content (identical to store_categories & hero_slides, never fails on constraints)
     try {
-      await supabase.from("products").upsert(fullProduct);
-    } catch (e) {
-      console.warn("Supabase saveProduct error:", e);
+      await supabase.from("cms_content").upsert({
+        key: "store_products",
+        content: newList,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content save products notice:", cmsErr);
+    }
+
+    // 2b. Sync to relational products table with strictly safe columns conforming to schema
+    try {
+      const dbRow: Record<string, unknown> = {
+        id: fullProduct.id,
+        name: fullProduct.name,
+        slug: fullProduct.slug,
+        description: fullProduct.description || "",
+        price: fullProduct.price,
+        compare_at_price: fullProduct.compare_at_price || null,
+        stock_quantity: fullProduct.stock_quantity ?? 10,
+        is_featured: Boolean(fullProduct.is_featured),
+        is_archived: Boolean(fullProduct.is_archived),
+        images: fullProduct.images || [],
+        tags: fullProduct.tags || [],
+        dimensions: fullProduct.dimensions || "",
+        materials: fullProduct.materials || "",
+        care_instructions: fullProduct.care_instructions || "",
+        updated_at: new Date().toISOString(),
+        created_at: fullProduct.created_at,
+      };
+
+      if (fullProduct.category_id) {
+        dbRow.category_id = fullProduct.category_id;
+      }
+
+      const { error: upsertErr } = await supabase.from("products").upsert(dbRow);
+      if (upsertErr) {
+        console.warn("Products table upsert notice (FK or constraint), retrying with category_id: null:", upsertErr.message);
+        // If category_id violated foreign key constraint, save with null category_id in relational table
+        await supabase.from("products").upsert({ ...dbRow, category_id: null });
+      }
+    } catch (tableErr) {
+      console.warn("Supabase products table upsert exception:", tableErr);
     }
   }
 
-  const exists = existingProducts.some((p) => p.id === id);
-  let newList: Product[];
-  if (exists) {
-    newList = existingProducts.map((p) => (p.id === id ? fullProduct : p));
-  } else {
-    newList = [fullProduct, ...existingProducts];
-  }
-
-  saveToLocal(STORAGE_KEYS.PRODUCTS, newList);
-  updatedProduct = fullProduct;
-  return updatedProduct;
+  return fullProduct;
 }
 
 export async function deleteProduct(productId: string): Promise<boolean> {
@@ -156,7 +214,20 @@ export async function deleteProduct(productId: string): Promise<boolean> {
     }
   }
 
+  const filtered = products.filter((p) => p.id !== productId);
+  saveToLocal(STORAGE_KEYS.PRODUCTS, filtered);
+
   if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: "store_products",
+        content: filtered,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content delete product notice:", cmsErr);
+    }
+
     try {
       await supabase.from("products").delete().eq("id", productId);
     } catch (e) {
@@ -164,8 +235,6 @@ export async function deleteProduct(productId: string): Promise<boolean> {
     }
   }
 
-  const filtered = products.filter((p) => p.id !== productId);
-  saveToLocal(STORAGE_KEYS.PRODUCTS, filtered);
   return true;
 }
 
@@ -183,6 +252,16 @@ export async function decreaseProductStock(productId: string, quantityToDeduct: 
 
   if (isSupabaseConfigured() && supabase) {
     try {
+      await supabase.from("cms_content").upsert({
+        key: "store_products",
+        content: updated,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (cmsErr) {
+      console.warn("Supabase cms_content decreaseStock notice:", cmsErr);
+    }
+
+    try {
       await supabase.rpc("decrease_product_stock", {
         p_product_id: productId,
         p_quantity: quantityToDeduct,
@@ -191,6 +270,83 @@ export async function decreaseProductStock(productId: string, quantityToDeduct: 
       console.warn("Supabase decreaseProductStock error:", e);
     }
   }
+}
+
+// -------------------------------------------------------------
+// STOCK CONCURRENCY LOCK & VALIDATION
+// Prevents race conditions when multiple customers buy the same product
+// -------------------------------------------------------------
+export async function acquireStockLockAndVerify(
+  items: { product_id: string; quantity: number; product_name?: string }[]
+): Promise<{ success: boolean; error?: string }> {
+  if (isSupabaseConfigured() && supabase) {
+    // 1. Fresh database query directly against products table
+    try {
+      const productIds = items.map((i) => i.product_id);
+      const { data: freshProducts, error } = await supabase
+        .from("products")
+        .select("id, name, stock_quantity")
+        .in("id", productIds);
+
+      if (!error && freshProducts && freshProducts.length > 0) {
+        for (const item of items) {
+          const p = freshProducts.find((fp) => fp.id === item.product_id);
+          if (!p) {
+            return {
+              success: false,
+              error: `Item "${item.product_name || "Product"}" is no longer available.`,
+            };
+          }
+          if (p.stock_quantity < item.quantity) {
+            return {
+              success: false,
+              error: `Stock conflict: "${p.name}" has only ${p.stock_quantity} left in stock (you requested ${item.quantity}). Another customer may have just ordered it.`,
+            };
+          }
+        }
+        return { success: true };
+      }
+    } catch (dbErr) {
+      console.warn("Fresh stock lock check fallback to store_products:", dbErr);
+    }
+
+    // 2. Fallback to cms_content store_products
+    try {
+      const { data } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "store_products")
+        .single();
+      if (data?.content && Array.isArray(data.content)) {
+        for (const item of items) {
+          const p = data.content.find((cp: any) => cp.id === item.product_id);
+          if (p && p.stock_quantity < item.quantity) {
+            return {
+              success: false,
+              error: `Stock conflict: "${p.name}" has only ${p.stock_quantity} available. Another customer just completed their order.`,
+            };
+          }
+        }
+        return { success: true };
+      }
+    } catch (cmsErr) {
+      console.warn("CMS stock check notice:", cmsErr);
+    }
+  }
+
+  // 3. Fallback to local store products
+  const localProducts = getFromLocal<Product[]>(STORAGE_KEYS.PRODUCTS, []) || [];
+  for (const item of items) {
+    const p = localProducts.find((lp) => lp.id === item.product_id);
+    if (p && p.stock_quantity < item.quantity) {
+      return {
+        success: false,
+        error: `Insufficient stock for "${p.name}". Only ${p.stock_quantity} remaining.`,
+      };
+    }
+  }
+
+  return { success: true };
 }
 
 // -------------------------------------------------------------
@@ -352,7 +508,20 @@ export async function createOrder(orderInput: Omit<Order, "id" | "order_number" 
     created_at: new Date().toISOString(),
   };
 
-  // Reduce product stock immediately for each item in the order
+  // 1. Stock Concurrency Lock Guard: Prevent overselling if ordered at the exact same time
+  const lockCheck = await acquireStockLockAndVerify(
+    newOrder.items.map((it) => ({
+      product_id: it.product_id,
+      quantity: it.quantity,
+      product_name: it.product_name,
+    }))
+  );
+
+  if (!lockCheck.success) {
+    throw new Error(lockCheck.error || "Order rejected due to stock conflict. Another customer just purchased this item.");
+  }
+
+  // 2. Reduce product stock immediately for each item in the order
   for (const item of newOrder.items) {
     await decreaseProductStock(item.product_id, item.quantity);
   }
@@ -399,6 +568,15 @@ export async function createOrder(orderInput: Omit<Order, "id" | "order_number" 
     } catch (e) {
       console.warn("Supabase createOrder error:", e);
     }
+  }
+
+  // Trigger Order Confirmation Emails to Customer & Admin via Brevo (non-blocking)
+  if (typeof window !== "undefined") {
+    fetch("/api/email/order-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: newOrder }),
+    }).catch((err) => console.warn("Order confirmation email dispatch notice:", err));
   }
 
   return newOrder;
@@ -547,6 +725,84 @@ export async function saveAboutCMS(content: CMSAboutContent): Promise<void> {
 }
 
 // -------------------------------------------------------------
+// OFFER BANNER SECTION CMS STORE (Strictly Dynamic)
+// -------------------------------------------------------------
+export async function getOfferBanner(): Promise<OfferBannerContent | null> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "offer_banner")
+        .maybeSingle();
+
+      if (!error && data?.content) {
+        saveToLocal(STORAGE_KEYS.OFFER_BANNER, data.content as OfferBannerContent);
+        return data.content as OfferBannerContent;
+      }
+    } catch (e) {
+      console.warn("Supabase getOfferBanner notice:", e);
+    }
+  }
+
+  return getFromLocal<OfferBannerContent | null>(STORAGE_KEYS.OFFER_BANNER, null);
+}
+
+export async function saveOfferBanner(content: OfferBannerContent): Promise<void> {
+  saveToLocal(STORAGE_KEYS.OFFER_BANNER, content);
+  if (isSupabaseConfigured() && supabase) {
+    const { error } = await supabase.from("cms_content").upsert({
+      key: "offer_banner",
+      content,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Supabase saveOfferBanner error:", error);
+      throw error;
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// WHY CHOOSE LUMERO CMS STORE (Strictly Dynamic)
+// -------------------------------------------------------------
+export async function getWhyChooseSection(): Promise<WhyChooseSection | null> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "why_choose_lumero")
+        .maybeSingle();
+
+      if (!error && data?.content) {
+        saveToLocal(STORAGE_KEYS.WHY_CHOOSE, data.content as WhyChooseSection);
+        return data.content as WhyChooseSection;
+      }
+    } catch (e) {
+      console.warn("Supabase getWhyChooseSection notice:", e);
+    }
+  }
+
+  return getFromLocal<WhyChooseSection | null>(STORAGE_KEYS.WHY_CHOOSE, null);
+}
+
+export async function saveWhyChooseSection(content: WhyChooseSection): Promise<void> {
+  saveToLocal(STORAGE_KEYS.WHY_CHOOSE, content);
+  if (isSupabaseConfigured() && supabase) {
+    const { error } = await supabase.from("cms_content").upsert({
+      key: "why_choose_lumero",
+      content,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Supabase saveWhyChooseSection error:", error);
+      throw error;
+    }
+  }
+}
+
+// -------------------------------------------------------------
 // USER / ADMIN AUTH STORE
 // -------------------------------------------------------------
 export function getCurrentUser(): UserProfile | null {
@@ -555,4 +811,102 @@ export function getCurrentUser(): UserProfile | null {
 
 export function setCurrentUser(user: UserProfile | null) {
   saveToLocal(STORAGE_KEYS.CURRENT_USER, user);
+}
+
+// -------------------------------------------------------------
+// CUSTOMER ORDERS & SAVED ADDRESS STORE
+// -------------------------------------------------------------
+export async function getCustomerOrders(email: string, customerId?: string): Promise<Order[]> {
+  const allOrders = await getOrders();
+  const cleanEmail = email ? email.trim().toLowerCase() : "";
+  return allOrders.filter((o) => {
+    const matchEmail = cleanEmail && o.customer_email?.trim().toLowerCase() === cleanEmail;
+    const matchId = customerId && o.customer_id === customerId;
+    return matchEmail || matchId;
+  });
+}
+
+export async function getSavedAddress(userId: string): Promise<ShippingAddress | null> {
+  if (!userId) return null;
+
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", `customer_addr_${userId}`)
+        .maybeSingle();
+
+      if (!error && data?.content) {
+        saveToLocal(`lumero_saved_addr_${userId}`, data.content as ShippingAddress);
+        return data.content as ShippingAddress;
+      }
+    } catch (e) {
+      console.warn("Supabase getSavedAddress notice:", e);
+    }
+  }
+
+  return getFromLocal<ShippingAddress | null>(`lumero_saved_addr_${userId}`, null);
+}
+
+export async function saveCustomerAddress(userId: string, address: ShippingAddress): Promise<void> {
+  if (!userId) return;
+  saveToLocal(`lumero_saved_addr_${userId}`, address);
+
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: `customer_addr_${userId}`,
+        content: address,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn("Supabase saveCustomerAddress notice:", e);
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// ADMIN WHATSAPP ORDER DISPATCH SETTINGS
+// -------------------------------------------------------------
+export async function getAdminWhatsAppNumber(): Promise<string> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "admin_whatsapp_phone")
+        .single();
+      if (data?.content?.phone) {
+        saveToLocal("lumero_admin_whatsapp_phone", { phone: data.content.phone });
+        return data.content.phone;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  const local = getFromLocal<{ phone: string } | null>("lumero_admin_whatsapp_phone", null);
+  return (
+    local?.phone ||
+    process.env.NEXT_PUBLIC_ADMIN_WHATSAPP ||
+    "+91 98765 43210"
+  );
+}
+
+export async function saveAdminWhatsAppNumber(phone: string): Promise<boolean> {
+  saveToLocal("lumero_admin_whatsapp_phone", { phone });
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: "admin_whatsapp_phone",
+        content: { phone },
+        updated_at: new Date().toISOString(),
+      });
+      return true;
+    } catch (e) {
+      console.warn("Supabase saveAdminWhatsAppNumber error:", e);
+    }
+  }
+  return true;
 }

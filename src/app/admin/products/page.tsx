@@ -142,7 +142,12 @@ function AdminProductsContent() {
 
   // Filter products
   const filteredProducts = products.filter((p) => {
-    if (selectedCategory !== "all" && p.category_id !== selectedCategory) return false;
+    if (selectedCategory !== "all") {
+      const catObj = categories.find((c) => c.id === selectedCategory || c.slug === selectedCategory);
+      const matchId = p.category_id === selectedCategory;
+      const matchSlug = catObj && (p.category_id === catObj.id || p.category_id === catObj.slug);
+      if (!matchId && !matchSlug) return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q);

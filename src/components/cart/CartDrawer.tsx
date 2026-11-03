@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { X, Plus, Minus, Trash2, ArrowRight, ShoppingBag, Sparkles } from "lucide-react";
+import { X, Plus, Minus, Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export function CartDrawer() {
@@ -15,7 +15,6 @@ export function CartDrawer() {
     removeFromCart,
     subtotal,
     shippingFee,
-    freeShippingThreshold,
     totalItems,
   } = useCart();
 
@@ -30,21 +29,27 @@ export function CartDrawer() {
     };
   }, [isCartOpen]);
 
-  if (!isCartOpen) return null;
-
-  const amountNeededForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-  const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
-
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
+    <div
+      className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${
+        isCartOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
+      }`}
+      aria-hidden={!isCartOpen}
+    >
+      {/* Backdrop with smooth fade */}
       <div
-        className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs transition-opacity duration-300"
+        className={`fixed inset-0 bg-stone-900/60 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
+          isCartOpen ? "opacity-100" : "opacity-0"
+        }`}
         onClick={() => setIsCartOpen(false)}
       />
 
-      <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
-        <div className="w-screen max-w-md bg-stone-50 border-l border-stone-200 shadow-2xl flex flex-col">
+      <div className="fixed inset-y-0 right-0 flex max-w-full pl-6 sm:pl-10 pointer-events-none">
+        <div
+          className={`w-screen max-w-md bg-stone-50 border-l border-stone-200 shadow-2xl flex flex-col pointer-events-auto transform transition-transform duration-300 ease-out ${
+            isCartOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200 bg-white">
             <div className="flex items-center gap-2">
@@ -62,26 +67,6 @@ export function CartDrawer() {
             >
               <X className="h-5 w-5" />
             </button>
-          </div>
-
-          {/* Free Shipping Progress */}
-          <div className="px-6 py-3.5 bg-stone-100/70 border-b border-stone-200">
-            {amountNeededForFreeShipping > 0 ? (
-              <p className="text-xs text-stone-600 mb-2">
-                Add <span className="font-semibold text-stone-900">₹{amountNeededForFreeShipping.toLocaleString()}</span> more for <span className="font-medium text-amber-800">Complimentary Delivery</span>
-              </p>
-            ) : (
-              <p className="text-xs font-medium text-emerald-800 flex items-center gap-1.5 mb-2">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                Unlocked: You qualify for Complimentary Delivery!
-              </p>
-            )}
-            <div className="h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-stone-900 transition-all duration-500 ease-out"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
           </div>
 
           {/* Items List */}
@@ -217,7 +202,7 @@ export function CartDrawer() {
                 </Link>
 
                 <p className="text-center text-[11px] text-stone-400">
-                  Taxes calculated at checkout • Razorpay & COD Available
+                  Taxes calculated at checkout • 100% Secure Razorpay Payment
                 </p>
               </div>
             </div>

@@ -46,6 +46,7 @@ export interface ShippingAddress {
   state: string;
   postal_code: string;
   country: string;
+  phone?: string;
 }
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "cod";
@@ -144,6 +145,32 @@ export interface CMSAboutContent {
   closing_subtagline: string;
 }
 
+export interface WhyChooseItem {
+  id: string;
+  title: string;
+  description: string;
+  sort_order: number;
+}
+
+export interface WhyChooseSection {
+  image_url: string;
+  image_public_id?: string;
+  subtitle?: string;
+  title?: string;
+  items: WhyChooseItem[];
+}
+
+export interface OfferBannerContent {
+  image_url: string;
+  image_public_id?: string;
+  subtitle: string;
+  heading: string;
+  description: string;
+  button_text: string;
+  button_link: string;
+  is_active: boolean;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -151,4 +178,5 @@ export interface UserProfile {
   role: "admin" | "customer";
   phone?: string;
   avatar_url?: string;
+  saved_address?: ShippingAddress;
 }
