@@ -18,7 +18,6 @@ import {
   RotateCw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
 
 interface CustomerAuthModalProps {
   isOpen: boolean;

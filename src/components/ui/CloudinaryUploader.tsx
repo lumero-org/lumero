@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Image from "next/image";
-import { UploadCloud, X, Loader2, Sparkles, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { UploadCloud, X, Loader2, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { ProductImage } from "@/types";
 import { fileToDataUrl } from "@/lib/imageCompressor";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ export function CloudinaryUploader({
   images,
   onChange,
   maxImages = 5,
-  isProduct = true,
   folder = "lumero/products",
 }: CloudinaryUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);

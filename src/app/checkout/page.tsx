@@ -54,29 +54,28 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+
+    getSavedAddress(user.id).then((saved) => {
       setFormData((prev) => ({
         ...prev,
         name: prev.name || user.full_name,
         email: prev.email || user.email,
-        phone: prev.phone || user.phone || "",
+        phone: prev.phone || user.phone || saved?.phone || "",
+        ...(saved && (saved.address || saved.city)
+          ? {
+              address: saved.address || prev.address,
+              city: saved.city || prev.city,
+              state: saved.state || prev.state,
+              postal_code: saved.postal_code || prev.postal_code,
+              country: saved.country || prev.country || "India",
+            }
+          : {}),
       }));
-
-      getSavedAddress(user.id).then((saved) => {
-        if (saved && (saved.address || saved.city)) {
-          setHasSavedAddress(true);
-          setFormData((prev) => ({
-            ...prev,
-            address: saved.address || prev.address,
-            city: saved.city || prev.city,
-            state: saved.state || prev.state,
-            postal_code: saved.postal_code || prev.postal_code,
-            country: saved.country || prev.country || "India",
-            phone: saved.phone || prev.phone,
-          }));
-        }
-      });
-    }
+      if (saved && (saved.address || saved.city)) {
+        setHasSavedAddress(true);
+      }
+    });
   }, [user]);
 
   // Reliable Razorpay SDK loader
@@ -282,7 +281,7 @@ export default function CheckoutPage() {
       };
 
       const razorpayInstance = new window.Razorpay(options);
-      razorpayInstance.on("payment.failed", function (response: any) {
+      razorpayInstance.on("payment.failed", function (response: { error?: { description?: string } }) {
         setIsProcessing(false);
         toast.error("Payment Failed", {
           description: response.error?.description || "Transaction was declined.",

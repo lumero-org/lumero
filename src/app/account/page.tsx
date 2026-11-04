@@ -8,17 +8,13 @@ import {
   User,
   ShoppingBag,
   MapPin,
-  Mail,
-  Phone,
   LogOut,
   Loader2,
   CheckCircle2,
   Package,
   ArrowRight,
-  Clock,
   ChevronRight,
   ShieldCheck,
-  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -47,29 +43,24 @@ export default function AccountPage() {
     phone: "",
   });
   const [isSavingAddress, setIsSavingAddress] = useState(false);
-  const [isLoadingAddress, setIsLoadingAddress] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Fetch orders and saved address when user is authenticated
   useEffect(() => {
-    if (user) {
-      setIsLoadingOrders(true);
-      getCustomerOrders(user.email, user.id)
-        .then((data) => setOrders(data))
-        .catch(() => setOrders([]))
-        .finally(() => setIsLoadingOrders(false));
+    if (!user) return;
 
-      setIsLoadingAddress(true);
-      getSavedAddress(user.id)
-        .then((addr) => {
-          if (addr) {
-            setSavedAddress(addr);
-          } else if (user.saved_address) {
-            setSavedAddress(user.saved_address);
-          }
-        })
-        .finally(() => setIsLoadingAddress(false));
-    }
+    getCustomerOrders(user.email, user.id)
+      .then((data) => setOrders(data))
+      .catch(() => setOrders([]))
+      .finally(() => setIsLoadingOrders(false));
+
+    getSavedAddress(user.id).then((addr) => {
+      if (addr) {
+        setSavedAddress(addr);
+      } else if (user.saved_address) {
+        setSavedAddress(user.saved_address);
+      }
+    });
   }, [user]);
 
   // Loading state while checking session (Page skeleton)

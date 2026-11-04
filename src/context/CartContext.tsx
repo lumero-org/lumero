@@ -23,33 +23,28 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = "lumero_cart_items_v1";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(CART_STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to load cart", e);
+      }
+    }
+    return [];
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   const freeShippingThreshold = 1999;
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) {
-        setItems(JSON.parse(saved));
-      }
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
     } catch (e) {
-      console.error("Failed to load cart", e);
+      console.error("Failed to persist cart", e);
     }
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      } catch (e) {
-        console.error("Failed to persist cart", e);
-      }
-    }
-  }, [items, isLoaded]);
+  }, [items]);
 
   const addToCart = (product: Product, quantity = 1) => {
     if (product.stock_quantity <= 0) {

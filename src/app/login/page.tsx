@@ -3,9 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Lock, Mail, User, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
+import { Lock, Mail, User, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();

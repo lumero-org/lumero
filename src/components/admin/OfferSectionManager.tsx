@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
-import { Save, Loader2, Sparkles, ExternalLink, ArrowRight } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { CloudinaryUploader } from "@/components/ui/CloudinaryUploader";
 import { getOfferBanner, saveOfferBanner } from "@/lib/store";
 import { OfferBannerContent } from "@/types";

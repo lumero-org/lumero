@@ -10,36 +10,41 @@ import { OfferSection } from "@/components/home/OfferSection";
 import {
   getProducts,
   getCategories,
-  getHomeCMS,
   getHeroSlides,
   getOfferBanner,
 } from "@/lib/store";
-import { Product, Category, CMSHomeContent, HeroSlide, OfferBannerContent } from "@/types";
-import { initialHomeCMS } from "@/lib/mockData";
+import { Product, Category, HeroSlide, OfferBannerContent } from "@/types";
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cms, setCms] = useState<CMSHomeContent>(initialHomeCMS);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [offerBanner, setOfferBanner] = useState<OfferBannerContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHeroLoading, setIsHeroLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Fetch hero slides independently and immediately so Hero Section renders and transitions without delay
+    getHeroSlides()
+      .then((slides) => {
+        if (slides && slides.length > 0) {
+          setHeroSlides(slides);
+        }
+      })
+      .catch((e) => console.error("Failed to load hero slides:", e))
+      .finally(() => setIsHeroLoading(false));
+
+    // 2. Fetch all other catalog and CMS data in parallel
     async function loadData() {
       try {
-        const [loadedProducts, loadedCategories, loadedCms, loadedSlides, loadedOffer] =
+        const [loadedProducts, loadedCategories, loadedOffer] =
           await Promise.all([
             getProducts(),
             getCategories(),
-            getHomeCMS(),
-            getHeroSlides(),
             getOfferBanner(),
           ]);
         setProducts(loadedProducts);
         setCategories(loadedCategories);
-        setCms(loadedCms || initialHomeCMS);
-        setHeroSlides(loadedSlides);
         setOfferBanner(loadedOffer);
       } catch (e) {
         console.error("Failed to load home data:", e);
@@ -59,7 +64,7 @@ export default function HomePage() {
   return (
     <div className="space-y-16 sm:space-y-24 pb-20">
       {/* 1. HERO SECTION & SLIDER (Dynamically loaded from database) */}
-      <HeroSection slides={heroSlides} isLoading={isLoading} />
+      <HeroSection slides={heroSlides} isLoading={isHeroLoading} />
 
       {/* 2. SHOP BY CATEGORY SECTION */}
       {/* Requirement: 3-column grid on desktop, 2-column grid on mobile, purely dynamic from DB */}

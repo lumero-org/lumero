@@ -3,15 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
-  ShoppingBag,
   Search,
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  CheckCircle,
-  Truck,
-  XCircle,
   Eye,
   X,
 } from "lucide-react";
@@ -39,7 +31,17 @@ export default function AdminOrdersPage() {
   };
 
   useEffect(() => {
-    loadData();
+    let isMounted = true;
+    getOrders()
+      .then((data) => {
+        if (isMounted) setOrders(data);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
-import { CheckCircle2, Package, MapPin, ArrowRight, Truck } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight } from "lucide-react";
 import { getOrders } from "@/lib/store";
 import { Order } from "@/types";
 

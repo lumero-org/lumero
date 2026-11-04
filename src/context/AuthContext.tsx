@@ -18,8 +18,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(() => getCurrentUser());
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchProfileRole = async (
     userId: string,
@@ -51,10 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // If profile row doesn't exist yet, automatically create it
-          const initialRole =
-            role === "admin" || email.toLowerCase().startsWith("admin")
-              ? "admin"
-              : "customer";
+          const initialRole = role === "admin" ? "admin" : "customer";
 
           await supabase.from("profiles").upsert({
             id: userId,
@@ -81,11 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Check initial cached user
-    const initial = getCurrentUser();
-    setUser(initial);
-    setIsLoading(false);
-
     // If Supabase is configured, sync with active Supabase session
     if (isSupabaseConfigured() && supabase) {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -336,7 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // 2. Attempt Supabase Auth creation
         let customerId = `cust_${Date.now()}`;
-        const { data, error } = await supabase.auth.signUp({
+        const { data } = await supabase.auth.signUp({
           email: emailClean,
           password: pass,
           options: {

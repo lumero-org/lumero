@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Sliders } from "lucide-react";
@@ -24,30 +24,23 @@ export function HeroSection({
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-slide effect (sliding right-to-left)
+  // Auto-slide effect (sliding right-to-left) with smooth, consistent timing
   useEffect(() => {
-    if (displaySlides.length <= 1 || isHovered) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
+    if (displaySlides.length <= 1 || isHovered) return;
 
-    timerRef.current = setInterval(() => {
+    const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % displaySlides.length);
-    }, 4500);
+    }, 2500);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [displaySlides.length, isHovered, currentIndex]);
+    return () => clearInterval(timer);
+  }, [displaySlides.length, isHovered]);
 
-  // Reset index if slides change and index is out of bounds
-  useEffect(() => {
-    if (currentIndex >= displaySlides.length && displaySlides.length > 0) {
-      setCurrentIndex(0);
-    }
-  }, [displaySlides.length, currentIndex]);
+  // Ensure index is always within valid bounds
+  const safeIndex =
+    displaySlides.length > 0 && currentIndex >= displaySlides.length
+      ? 0
+      : currentIndex;
 
   // 1. LOADING SKELETON STATE
   if (isLoading) {
@@ -121,7 +114,7 @@ export function HeroSection({
     );
   }
 
-  const currentSlide = displaySlides[currentIndex] || displaySlides[0];
+  const currentSlide = displaySlides[safeIndex] || displaySlides[0];
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
@@ -210,9 +203,9 @@ export function HeroSection({
                   Horizontal track shifting translateX(-${currentIndex * 100}%)
               */}
               <div
-                className="flex h-full w-full transition-transform duration-700 ease-in-out"
+                className="flex h-full w-full transition-transform duration-400 ease-out"
                 style={{
-                  transform: `translateX(-${currentIndex * 100}%)`,
+                  transform: `translateX(-${safeIndex * 100}%)`,
                 }}
               >
                 {displaySlides.map((slide, index) => {
@@ -231,8 +224,8 @@ export function HeroSection({
                         src={slide.image_url}
                         alt={slide.title || "Lumero Interior Decor"}
                         fill
-                        priority={index === 0}
-                        quality={95}
+                        priority
+                        quality={90}
                         className={`object-cover rounded-2xl ${
                           hasMobileBanner ? "hidden lg:block" : ""
                         }`}
@@ -246,8 +239,8 @@ export function HeroSection({
                           src={slide.mobile_image_url!}
                           alt={`${slide.title || "Lumero Decor"} Mobile Banner`}
                           fill
-                          priority={index === 0}
-                          quality={95}
+                          priority
+                          quality={90}
                           className="object-cover rounded-2xl lg:hidden"
                           style={{ borderRadius: "1rem" }}
                           sizes="(max-width: 768px) 100vw, 50vw"
@@ -283,9 +276,9 @@ export function HeroSection({
                 </Link>
               </div>
 
-              {/* DESKTOP VIEW: Minimal Slide Indicator Bar at bottom-center inside hero image */}
+              {/* DESKTOP VIEW: Minimal Slide Indicator Bar at bottom-center inside hero image (No background capsule) */}
               {displaySlides.length > 1 && (
-                <div className="hidden lg:flex absolute bottom-5 lg:bottom-6 left-1/2 -translate-x-1/2 z-20 items-center gap-2 px-3 py-1.5 rounded-full bg-stone-950/25 backdrop-blur-md">
+                <div className="hidden lg:flex absolute bottom-5 lg:bottom-6 left-1/2 -translate-x-1/2 z-20 items-center gap-2">
                   {displaySlides.map((slide, idx) => (
                     <button
                       key={slide.id || idx}
@@ -293,9 +286,9 @@ export function HeroSection({
                       onClick={() => setCurrentIndex(idx)}
                       aria-label={`Go to slide ${idx + 1}`}
                       className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                        idx === currentIndex
-                          ? "w-8 bg-white shadow-xs"
-                          : "w-2.5 bg-white/45 hover:bg-white/80"
+                        idx === safeIndex
+                          ? "w-8 bg-white shadow-md"
+                          : "w-2.5 bg-white/60 hover:bg-white/90 shadow-xs"
                       }`}
                     />
                   ))}

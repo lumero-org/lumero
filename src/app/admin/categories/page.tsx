@@ -11,9 +11,6 @@ import {
   UploadCloud,
   Image as ImageIcon,
   Loader2,
-  RefreshCw,
-  Sparkles,
-  ArrowUpDown,
 } from "lucide-react";
 import { getCategories, saveCategory, deleteCategory } from "@/lib/store";
 import { Category } from "@/types";
@@ -47,7 +44,21 @@ export default function AdminCategoriesPage() {
   };
 
   useEffect(() => {
-    loadData();
+    let isMounted = true;
+    getCategories()
+      .then((data) => {
+        if (isMounted) setCategories(data);
+      })
+      .catch((e) => {
+        console.error("Failed to load categories:", e);
+        toast.error("Failed to load categories from database");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleOpenCreate = () => {

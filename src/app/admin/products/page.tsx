@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,13 +11,9 @@ import {
   Trash2,
   ExternalLink,
   X,
-  Package,
-  Sparkles,
-  Check,
-  AlertCircle,
 } from "lucide-react";
 import { getProducts, getCategories, saveProduct, deleteProduct } from "@/lib/store";
-import { Product, Category, ProductImage } from "@/types";
+import { Product, Category } from "@/types";
 import { CloudinaryUploader } from "@/components/ui/CloudinaryUploader";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { toast } from "sonner";
@@ -52,17 +48,7 @@ function AdminProductsContent() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (shouldOpenNew && categories.length > 0) {
-      handleOpenCreate();
-    }
-  }, [shouldOpenNew, categories]);
-
-  const handleOpenCreate = () => {
+  const handleOpenCreate = useCallback(() => {
     setEditingProduct({
       id: "",
       name: "",
@@ -81,7 +67,33 @@ function AdminProductsContent() {
       care_instructions: "",
     });
     setIsEditorOpen(true);
-  };
+  }, [categories]);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([getProducts(), getCategories()])
+      .then(([p, c]) => {
+        if (isMounted) {
+          setProducts(p);
+          setCategories(c);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (shouldOpenNew && categories.length > 0) {
+      const timer = setTimeout(() => {
+        handleOpenCreate();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldOpenNew, categories, handleOpenCreate]);
 
   const handleOpenEdit = (p: Product) => {
     setEditingProduct({ ...p });

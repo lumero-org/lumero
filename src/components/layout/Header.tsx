@@ -46,16 +46,18 @@ export function Header() {
 
   // Pre-load products when search is opened
   useEffect(() => {
-    if (isSearchOpen && allProducts.length === 0) {
-      setIsLoadingSearch(true);
-      getProducts()
-        .then((items) => {
-          setAllProducts(items);
-        })
-        .finally(() => {
-          setIsLoadingSearch(false);
-        });
-    }
+    if (!isSearchOpen || allProducts.length > 0) return;
+    let isMounted = true;
+    getProducts()
+      .then((items) => {
+        if (isMounted) setAllProducts(items);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingSearch(false);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, [isSearchOpen, allProducts.length]);
 
   // Handle ESC key to close search
@@ -195,7 +197,10 @@ export function Header() {
 
             {/* Search Trigger */}
             <button
-              onClick={() => setIsSearchOpen(true)}
+              onClick={() => {
+                setIsSearchOpen(true);
+                if (allProducts.length === 0) setIsLoadingSearch(true);
+              }}
               className="p-2 text-stone-700 hover:text-stone-950 transition rounded-full hover:bg-stone-100"
               aria-label="Search items"
             >

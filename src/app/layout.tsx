@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   title: "LUMERO | Modern spaces. Better living. | Premium Home Décor",
   description:
     "Discover minimal, Scandinavian and contemporary home décor. Architectural lighting, natural travertine, ceramic planters, and everyday home essentials.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({

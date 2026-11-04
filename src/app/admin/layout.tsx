@@ -11,7 +11,6 @@ import {
   FileEdit,
   Settings,
   ExternalLink,
-  ShieldCheck,
   LogOut,
   Menu,
   X,

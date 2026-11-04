@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import {
   Save,
   Loader2,
@@ -9,10 +8,6 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  Sparkles,
-  GripVertical,
-  Edit2,
-  Check,
 } from "lucide-react";
 import { CloudinaryUploader } from "@/components/ui/CloudinaryUploader";
 import { getWhyChooseSection, saveWhyChooseSection } from "@/lib/store";

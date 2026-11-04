@@ -8,7 +8,6 @@ import {
   Package,
   AlertTriangle,
   ArrowRight,
-  ExternalLink,
   Plus,
 } from "lucide-react";
 import { getProducts, getOrders } from "@/lib/store";
@@ -17,7 +16,6 @@ import { Product, Order } from "@/types";
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -25,8 +23,8 @@ export default function AdminDashboardPage() {
         const [p, o] = await Promise.all([getProducts(), getOrders()]);
         setProducts(p);
         setOrders(o);
-      } finally {
-        setIsLoading(false);
+      } catch (e) {
+        console.error("Failed to load admin stats:", e);
       }
     }
     load();

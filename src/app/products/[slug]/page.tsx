@@ -8,14 +8,12 @@ import {
   Plus,
   Minus,
   ShoppingBag,
-  Zap,
   ShieldCheck,
   Truck,
   RotateCcw,
   Check,
   ChevronRight,
   ChevronLeft,
-  Sparkles,
 } from "lucide-react";
 import { getProductBySlug, getProducts, getAdminWhatsAppNumber } from "@/lib/store";
 import { Product } from "@/types";
@@ -35,40 +33,46 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<"specs" | "materials" | "shipping">("specs");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Touch Swipe Gesture Tracking for Mobile Image Gallery
+  // Touch Swipe Gesture Tracking for Mobile Image Gallery with smooth animation
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const [touchCurrentX, setTouchCurrentX] = useState<number | null>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
 
-  const minSwipeDistance = 45;
+  const minSwipeDistance = 40;
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
+    setTouchCurrentX(e.targetTouches[0].clientX);
+    setIsSwiping(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEndX(e.targetTouches[0].clientX);
+    if (!isSwiping || touchStartX === null) return;
+    setTouchCurrentX(e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
-    if (!touchStartX || !touchEndX || images.length <= 1) return;
-    const distance = touchStartX - touchEndX;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      setSelectedImageIndex((prev) => (prev + 1) % images.length);
-    } else if (isRightSwipe) {
-      setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    if (touchStartX !== null && touchCurrentX !== null && images.length > 1) {
+      const distance = touchStartX - touchCurrentX;
+      if (distance > minSwipeDistance) {
+        // Swiped Left -> Next Image
+        setSelectedImageIndex((prev) => (prev + 1) % images.length);
+      } else if (distance < -minSwipeDistance) {
+        // Swiped Right -> Previous Image
+        setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+      }
     }
     setTouchStartX(null);
-    setTouchEndX(null);
+    setTouchCurrentX(null);
+    setIsSwiping(false);
   };
 
   useEffect(() => {
     async function load() {
       if (!slug) return;
       setIsLoading(true);
+      setSelectedImageIndex(0);
+      setQuantity(1);
       try {
         const item = await getProductBySlug(slug);
         setProduct(item);
@@ -84,8 +88,6 @@ export default function ProductDetailPage() {
       }
     }
     load();
-    setSelectedImageIndex(0);
-    setQuantity(1);
   }, [slug]);
 
   // Luxury Skeleton Loader for Product Details
@@ -160,7 +162,6 @@ export default function ProductDetailPage() {
   const isOutOfStock = product.stock_quantity <= 0;
   const isLowStock = product.stock_quantity > 0 && product.stock_quantity <= 5;
   const images = product.images.length > 0 ? product.images : [{ url: "/placeholder.png", public_id: "default" }];
-  const currentImage = images[selectedImageIndex]?.url || images[0].url;
 
   const handleBuyNow = () => {
     addToCart(product, quantity);
@@ -220,24 +221,46 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Main Stage Image (Compact, restrained size with touch swipe support) */}
+            {/* Main Stage Image (Compact, restrained size with smooth touch swipe support) */}
             <div
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
               className="relative flex-1 aspect-square max-h-[440px] sm:max-h-[480px] overflow-hidden rounded-3xl bg-stone-100 border border-stone-200/90 shadow-md group touch-pan-y select-none"
             >
-              <Image
-                src={currentImage}
-                alt={product.name}
-                fill
-                priority
-                className="object-cover transition duration-500 group-hover:scale-105 pointer-events-none"
-                sizes="(max-width: 1024px) 100vw, 45vw"
-              />
+              {/* Smooth Carousel Track */}
+              <div
+                className={`flex h-full w-full ${
+                  isSwiping ? "" : "transition-transform duration-300 ease-out"
+                }`}
+                style={{
+                  transform: `translateX(calc(-${selectedImageIndex * 100}% + ${
+                    isSwiping && touchStartX !== null && touchCurrentX !== null
+                      ? touchCurrentX - touchStartX
+                      : 0
+                  }px))`,
+                }}
+              >
+                {images.map((img, idx) => (
+                  <div
+                    key={img.public_id || idx}
+                    className="relative min-w-full h-full flex-shrink-0"
+                  >
+                    <Image
+                      src={img.url}
+                      alt={`${product.name} view ${idx + 1}`}
+                      fill
+                      priority={idx === 0}
+                      className="object-cover pointer-events-none"
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                    />
+                  </div>
+                ))}
+              </div>
 
               {/* Badges on main image */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
+              <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
                 {isOutOfStock ? (
                   <span className="rounded-full bg-stone-900/95 backdrop-blur-xs px-3 py-1 text-xs font-medium text-white shadow-sm">
                     Sold Out
@@ -252,6 +275,50 @@ export default function ProductDetailPage() {
                   </span>
                 )}
               </div>
+
+              {/* Desktop Prev / Next Slide Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                    }}
+                    aria-label="Previous image"
+                    className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-xs text-stone-800 shadow-md opacity-0 group-hover:opacity-100 transition hover:bg-white cursor-pointer"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImageIndex((prev) => (prev + 1) % images.length);
+                    }}
+                    aria-label="Next image"
+                    className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-xs text-stone-800 shadow-md opacity-0 group-hover:opacity-100 transition hover:bg-white cursor-pointer"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+
+              {/* Mobile Slide Indicator Dots */}
+              {images.length > 1 && (
+                <div className="sm:hidden absolute bottom-3.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-900/40 backdrop-blur-xs pointer-events-none">
+                  {images.map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === selectedImageIndex
+                          ? "w-4 bg-white shadow-xs"
+                          : "w-1.5 bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -336,18 +403,9 @@ export default function ProductDetailPage() {
                     </span>
                   </div>
 
-                  {/* Buttons: Add to Bag & Order on WhatsApp on the same line, Large Buy Now button below */}
+                  {/* Buttons: WhatsApp Order first, then Add to Cart, Large Buy Now button below */}
                   <div className="space-y-3 pt-2">
                     <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                      <button
-                        type="button"
-                        onClick={() => addToCart(product, quantity)}
-                        className="flex items-center justify-center gap-2 rounded-full border border-stone-900 bg-white px-3 sm:px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-900 hover:bg-stone-50 active:scale-98 transition shadow-xs"
-                      >
-                        <ShoppingBag className="h-4 w-4 shrink-0" />
-                        <span className="truncate">Add to Bag</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={handleWhatsAppOrder}
@@ -358,6 +416,15 @@ export default function ProductDetailPage() {
                         </svg>
                         <span className="truncate">WhatsApp Order</span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product, quantity)}
+                        className="flex items-center justify-center gap-2 rounded-full border border-stone-900 bg-white px-3 sm:px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-900 hover:bg-stone-50 active:scale-98 transition shadow-xs"
+                      >
+                        <ShoppingBag className="h-4 w-4 shrink-0" />
+                        <span className="truncate">Add to Cart</span>
+                      </button>
                     </div>
 
                     <button
@@ -365,7 +432,6 @@ export default function ProductDetailPage() {
                       onClick={handleBuyNow}
                       className="w-full flex items-center justify-center gap-2 rounded-full bg-stone-950 px-6 py-4 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white hover:bg-stone-800 active:scale-98 transition shadow-md"
                     >
-                      <Zap className="h-4 w-4 fill-amber-400 text-amber-400" />
                       <span>Buy Now</span>
                     </button>
                   </div>

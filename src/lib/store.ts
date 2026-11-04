@@ -319,7 +319,7 @@ export async function acquireStockLockAndVerify(
         .single();
       if (data?.content && Array.isArray(data.content)) {
         for (const item of items) {
-          const p = data.content.find((cp: any) => cp.id === item.product_id);
+          const p = (data.content as Product[]).find((cp) => cp.id === item.product_id);
           if (p && p.stock_quantity < item.quantity) {
             return {
               success: false,

@@ -80,11 +80,18 @@ function ShopContent() {
     load();
   }, []);
 
+  const prevParamsRef = useRef({ cat: initialCategory, q: initialQuery });
   useEffect(() => {
-    const cat = searchParams.get("category");
-    if (cat) setSelectedCategory(cat);
-    const q = searchParams.get("q");
-    if (q !== null) setSearchQuery(q);
+    const cat = searchParams.get("category") || "all";
+    const q = searchParams.get("q") || "";
+    if (prevParamsRef.current.cat !== cat) {
+      prevParamsRef.current.cat = cat;
+      setSelectedCategory(cat);
+    }
+    if (prevParamsRef.current.q !== q) {
+      prevParamsRef.current.q = q;
+      setSearchQuery(q);
+    }
   }, [searchParams]);
 
   // Extract all unique tags dynamically from actual database products
@@ -190,7 +197,7 @@ function ShopContent() {
   }, [filteredProducts, sortBy]);
 
   // Filter controls JSX (Shared between Desktop sidebar & Mobile drawer)
-  const FilterControls = () => (
+  const filterControlsContent = (
     <div className="space-y-6">
       {/* Category Filter */}
       <div className="space-y-3">
@@ -390,7 +397,7 @@ function ShopContent() {
             )}
           </div>
 
-          <FilterControls />
+          {filterControlsContent}
         </aside>
 
         {/* RIGHT SIDE: Product Catalog Area */}
@@ -610,7 +617,7 @@ function ShopContent() {
 
             {/* Scrollable Filters */}
             <div className="flex-1 overflow-y-auto py-4 pr-1">
-              <FilterControls />
+              {filterControlsContent}
             </div>
 
             {/* Bottom Actions */}

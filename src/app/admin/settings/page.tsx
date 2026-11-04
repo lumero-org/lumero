@@ -2,16 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Settings,
-  ShieldCheck,
   CreditCard,
   Cloud,
   Database,
   Save,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAdminWhatsAppNumber, saveAdminWhatsAppNumber } from "@/lib/store";
