@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { CartItem, Product } from "@/types";
+import { CartItem, Product, ShippingSettings } from "@/types";
+import { getShippingSettings, DEFAULT_SHIPPING_SETTINGS } from "@/lib/store";
 import { toast } from "sonner";
 
 interface CartContextType {
@@ -16,6 +17,7 @@ interface CartContextType {
   subtotal: number;
   shippingFee: number;
   freeShippingThreshold: number;
+  shippingSettings: ShippingSettings;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -36,7 +38,49 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const freeShippingThreshold = 1999;
+  const [shippingSettings, setShippingSettings] = useState<ShippingSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("lumero_shipping_settings_v1");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to load shipping settings", e);
+      }
+    }
+    return DEFAULT_SHIPPING_SETTINGS;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    getShippingSettings().then((s) => {
+      if (isMounted && s) {
+        setShippingSettings(s);
+      }
+    });
+
+    const handleSync = (e?: Event) => {
+      if (!isMounted) return;
+      if (e && "detail" in e && (e as CustomEvent).detail) {
+        setShippingSettings((e as CustomEvent).detail);
+        return;
+      }
+      try {
+        const saved = localStorage.getItem("lumero_shipping_settings_v1");
+        if (saved) {
+          setShippingSettings(JSON.parse(saved));
+        }
+      } catch {}
+    };
+
+    window.addEventListener("lumero_shipping_updated", handleSync);
+    window.addEventListener("storage", handleSync);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("lumero_shipping_updated", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -130,7 +174,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 150;
+
+  let shippingFee = 0;
+  if (subtotal > 0) {
+    if (shippingSettings.method === "threshold") {
+      shippingFee =
+        subtotal >= shippingSettings.threshold_amount
+          ? 0
+          : shippingSettings.below_threshold_charge;
+    } else {
+      shippingFee = shippingSettings.fixed_charge;
+    }
+  }
+
+  const freeShippingThreshold =
+    shippingSettings.method === "threshold"
+      ? shippingSettings.threshold_amount
+      : 0;
 
   return (
     <CartContext.Provider
@@ -146,6 +206,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         shippingFee,
         freeShippingThreshold,
+        shippingSettings,
       }}
     >
       {children}

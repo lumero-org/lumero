@@ -6,19 +6,29 @@ import {
   Cloud,
   Database,
   Save,
+  Truck,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAdminWhatsAppNumber, saveAdminWhatsAppNumber } from "@/lib/store";
+import {
+  getAdminWhatsAppNumber,
+  saveAdminWhatsAppNumber,
+  getShippingSettings,
+  saveShippingSettings,
+  DEFAULT_SHIPPING_SETTINGS,
+} from "@/lib/store";
+import { ShippingSettings } from "@/types";
 
 export default function AdminSettingsPage() {
   const [storeSettings, setStoreSettings] = useState({
     storeName: "LUMERO Décor",
     currency: "INR (₹)",
-    freeShippingThreshold: 1999,
     supportEmail: "care@lumerodecor.com",
     supportPhone: "+91 98765 43210",
     adminWhatsApp: "+91 98765 43210",
   });
+  const [shippingSettings, setShippingSettings] =
+    useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -27,15 +37,23 @@ export default function AdminSettingsPage() {
         setStoreSettings((prev) => ({ ...prev, adminWhatsApp: phone }));
       }
     });
+    getShippingSettings().then((settings) => {
+      if (settings) {
+        setShippingSettings(settings);
+      }
+    });
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await saveAdminWhatsAppNumber(storeSettings.adminWhatsApp);
+      await Promise.all([
+        saveAdminWhatsAppNumber(storeSettings.adminWhatsApp),
+        saveShippingSettings(shippingSettings),
+      ]);
       toast.success("Settings Saved", {
-        description: "Store WhatsApp order destination & logistics updated.",
+        description: "Store shipping rules & WhatsApp details updated successfully.",
       });
     } catch {
       toast.error("Failed to save settings");
@@ -95,23 +113,6 @@ export default function AdminSettingsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Complimentary Shipping Minimum (₹)
-                </label>
-                <input
-                  type="number"
-                  value={storeSettings.freeShippingThreshold}
-                  onChange={(e) =>
-                    setStoreSettings({
-                      ...storeSettings,
-                      freeShippingThreshold: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
                   Concierge Support Email
                 </label>
                 <input
@@ -122,6 +123,205 @@ export default function AdminSettingsPage() {
                   }
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1">
+                  Customer Support Phone
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.supportPhone}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, supportPhone: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                />
+              </div>
+
+              {/* Shipping Configuration Section */}
+              <div className="sm:col-span-2 pt-3 border-t border-stone-100">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Truck className="h-4 w-4 text-amber-800" />
+                  <label className="text-xs font-semibold text-stone-900">
+                    Shipping Methods & Delivery Charges
+                  </label>
+                </div>
+
+                {/* Two Method Radio Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3.5">
+                  {/* Method 1: Conditional Free Shipping */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      setShippingSettings((prev) => ({ ...prev, method: "threshold" }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setShippingSettings((prev) => ({ ...prev, method: "threshold" }));
+                      }
+                    }}
+                    className={`cursor-pointer text-left p-3.5 rounded-xl border transition-all ${
+                      shippingSettings.method === "threshold"
+                        ? "border-amber-800/80 bg-amber-50/60 ring-1 ring-amber-800/30"
+                        : "border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-stone-300"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-stone-900">
+                          1. Conditional Free Shipping
+                        </p>
+                        <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                          Free shipping when order reaches a certain amount; shipping fee applied below it.
+                        </p>
+                      </div>
+                      <div
+                        className={`mt-0.5 h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                          shippingSettings.method === "threshold"
+                            ? "border-amber-800 bg-amber-800"
+                            : "border-stone-300 bg-white"
+                        }`}
+                      >
+                        {shippingSettings.method === "threshold" && (
+                          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Method 2: Fixed Shipping Charge */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      setShippingSettings((prev) => ({ ...prev, method: "fixed" }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setShippingSettings((prev) => ({ ...prev, method: "fixed" }));
+                      }
+                    }}
+                    className={`cursor-pointer text-left p-3.5 rounded-xl border transition-all ${
+                      shippingSettings.method === "fixed"
+                        ? "border-amber-800/80 bg-amber-50/60 ring-1 ring-amber-800/30"
+                        : "border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-stone-300"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-stone-900">
+                          2. Fixed Shipping Charge
+                        </p>
+                        <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                          Charge a flat delivery fee on all orders regardless of cart total.
+                        </p>
+                      </div>
+                      <div
+                        className={`mt-0.5 h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                          shippingSettings.method === "fixed"
+                            ? "border-amber-800 bg-amber-800"
+                            : "border-stone-300 bg-white"
+                        }`}
+                      >
+                        {shippingSettings.method === "fixed" && (
+                          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Configuration Controls based on Selected Method */}
+                {shippingSettings.method === "threshold" ? (
+                  <div className="bg-stone-50 rounded-xl p-3.5 border border-stone-200 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">
+                          Free Shipping Minimum Order Amount (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={shippingSettings.threshold_amount}
+                          onChange={(e) =>
+                            setShippingSettings({
+                              ...shippingSettings,
+                              threshold_amount: Math.max(0, parseInt(e.target.value) || 0),
+                            })
+                          }
+                          className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                        />
+                        <p className="text-[10px] text-stone-500 mt-1">
+                          Orders at or above this amount get FREE shipping.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">
+                          Shipping Fee Below Minimum (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={shippingSettings.below_threshold_charge}
+                          onChange={(e) =>
+                            setShippingSettings({
+                              ...shippingSettings,
+                              below_threshold_charge: Math.max(0, parseInt(e.target.value) || 0),
+                            })
+                          }
+                          className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                        />
+                        <p className="text-[10px] text-stone-500 mt-1">
+                          Shipping charged when cart total is below the minimum amount.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-amber-900 bg-amber-50/80 border border-amber-200/70 rounded-lg p-2.5 flex items-center gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-amber-800 shrink-0" />
+                      <span>
+                        <strong>Live Rule:</strong> Orders of{" "}
+                        <strong>₹{shippingSettings.threshold_amount.toLocaleString()}</strong> or more get{" "}
+                        <strong>FREE</strong> shipping. Orders under ₹{shippingSettings.threshold_amount.toLocaleString()} will be charged{" "}
+                        <strong>₹{shippingSettings.below_threshold_charge}</strong> shipping fee.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-stone-50 rounded-xl p-3.5 border border-stone-200 space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-stone-700 mb-1">
+                        Fixed Flat Shipping Charge (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={shippingSettings.fixed_charge}
+                        onChange={(e) =>
+                          setShippingSettings({
+                            ...shippingSettings,
+                            fixed_charge: Math.max(0, parseInt(e.target.value) || 0),
+                          })
+                        }
+                        className="w-full sm:max-w-xs rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                      />
+                      <p className="text-[10px] text-stone-500 mt-1">
+                        Every order will have this flat delivery fee added automatically.
+                      </p>
+                    </div>
+
+                    <div className="text-[11px] text-amber-900 bg-amber-50/80 border border-amber-200/70 rounded-lg p-2.5 flex items-center gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-amber-800 shrink-0" />
+                      <span>
+                        <strong>Live Rule:</strong> Every order will be charged a flat delivery fee of{" "}
+                        <strong>₹{shippingSettings.fixed_charge}</strong> regardless of order total.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Store WhatsApp Orders Destination */}

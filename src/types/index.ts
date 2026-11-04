@@ -180,3 +180,12 @@ export interface UserProfile {
   avatar_url?: string;
   saved_address?: ShippingAddress;
 }
+
+export type ShippingMethodType = "threshold" | "fixed";
+
+export interface ShippingSettings {
+  method: ShippingMethodType;
+  threshold_amount: number;       // When order subtotal >= threshold_amount, shipping is free (0)
+  below_threshold_charge: number; // Delivery charge when subtotal < threshold_amount
+  fixed_charge: number;           // Flat delivery charge for all orders
+}

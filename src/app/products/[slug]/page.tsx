@@ -25,7 +25,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const slug = params?.slug as string;
 
-  const { addToCart } = useCart();
+  const { addToCart, shippingSettings } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -359,7 +359,10 @@ export default function ProductDetailPage() {
                 )}
               </div>
               <p className="mt-1 text-[11px] text-stone-500">
-                Inclusive of all taxes. Free shipping on orders over ₹1,999.
+                Inclusive of all taxes.{" "}
+                {shippingSettings.method === "threshold"
+                  ? `Free shipping on orders over ₹${shippingSettings.threshold_amount.toLocaleString()}.`
+                  : `Flat shipping charge ₹${shippingSettings.fixed_charge}.`}
               </p>
 
               {/* Description */}
@@ -535,7 +538,9 @@ export default function ProductDetailPage() {
                         Delivered safely in custom honeycomb protective packaging.
                       </p>
                       <p className="text-stone-500">
-                        Orders above ₹1,999 qualify for 100% complimentary delivery nationwide.
+                        {shippingSettings.method === "threshold"
+                          ? `Orders above ₹${shippingSettings.threshold_amount.toLocaleString()} qualify for 100% complimentary delivery nationwide.`
+                          : `Nationwide flat delivery charge is ₹${shippingSettings.fixed_charge}.`}
                       </p>
                     </div>
                   )}

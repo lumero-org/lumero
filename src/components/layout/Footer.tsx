@@ -323,7 +323,14 @@ export function Footer() {
         <div className="mt-12 border-t border-stone-900 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-4">
           <p>© {new Date().getFullYear()} LUMERO Décor. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <span>Powered by Supabase, Cloudinary &amp; Razorpay</span>
+            <a
+              href="https://ekodrix.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-stone-500 hover:text-stone-300 transition"
+            >
+              Crafted by <span className="font-medium text-stone-400 hover:text-white">Ekodrix</span>
+            </a>
           </div>
         </div>
       </div>

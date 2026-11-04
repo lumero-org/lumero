@@ -11,6 +11,7 @@ import {
   WhyChooseSection,
   OfferBannerContent,
   ShippingAddress,
+  ShippingSettings,
 } from "@/types";
 import {
   initialHomeCMS,
@@ -906,6 +907,65 @@ export async function saveAdminWhatsAppNumber(phone: string): Promise<boolean> {
       return true;
     } catch (e) {
       console.warn("Supabase saveAdminWhatsAppNumber error:", e);
+    }
+  }
+  return true;
+}
+
+// -------------------------------------------------------------
+// STORE SHIPPING SETTINGS (Threshold-based Free & Fixed Shipping)
+// -------------------------------------------------------------
+export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
+  method: "threshold",
+  threshold_amount: 1999,
+  below_threshold_charge: 150,
+  fixed_charge: 150,
+};
+
+export async function getShippingSettings(): Promise<ShippingSettings> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "store_shipping_settings")
+        .maybeSingle();
+
+      if (data?.content && typeof data.content === "object") {
+        const s = data.content as Partial<ShippingSettings>;
+        const merged: ShippingSettings = {
+          method: s.method === "fixed" ? "fixed" : "threshold",
+          threshold_amount: typeof s.threshold_amount === "number" ? s.threshold_amount : 1999,
+          below_threshold_charge: typeof s.below_threshold_charge === "number" ? s.below_threshold_charge : 150,
+          fixed_charge: typeof s.fixed_charge === "number" ? s.fixed_charge : 150,
+        };
+        saveToLocal("lumero_shipping_settings_v1", merged);
+        return merged;
+      }
+    } catch (e) {
+      console.warn("Supabase getShippingSettings notice:", e);
+    }
+  }
+
+  const local = getFromLocal<ShippingSettings>("lumero_shipping_settings_v1", DEFAULT_SHIPPING_SETTINGS);
+  return local || DEFAULT_SHIPPING_SETTINGS;
+}
+
+export async function saveShippingSettings(settings: ShippingSettings): Promise<boolean> {
+  saveToLocal("lumero_shipping_settings_v1", settings);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("lumero_shipping_updated", { detail: settings }));
+  }
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: "store_shipping_settings",
+        content: settings,
+        updated_at: new Date().toISOString(),
+      });
+      return true;
+    } catch (e) {
+      console.warn("Supabase saveShippingSettings error:", e);
     }
   }
   return true;
