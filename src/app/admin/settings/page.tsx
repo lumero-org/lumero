@@ -417,7 +417,7 @@ export default function AdminSettingsPage() {
           <button
             type="submit"
             disabled={isSaving}
-            className="flex items-center gap-2 rounded-full bg-stone-950 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 shadow-xs disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full bg-stone-950 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-stone-800 shadow-xs disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition"
           >
             <Save className="h-3.5 w-3.5" />
             <span>{isSaving ? "Saving..." : "Save Changes"}</span>
