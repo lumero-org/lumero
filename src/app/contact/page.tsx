@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Mail, Phone, Clock, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { getStoreSettings, defaultStoreSettings } from "@/lib/store";
+import { StoreSettings } from "@/types";
 
 export default function ContactPage() {
+  const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -12,6 +15,14 @@ export default function ContactPage() {
     message: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    getStoreSettings().then((loaded) => {
+      if (loaded) {
+        setSettings(loaded);
+      }
+    });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,10 +55,11 @@ export default function ContactPage() {
         <div className="lg:col-span-5 space-y-8 bg-white p-8 rounded-3xl border border-stone-200 shadow-2xs">
           <div>
             <h3 className="font-serif text-lg font-medium text-stone-900 mb-2">
-              LUMERO Studio & Care
+              {settings.storeName || "LUMERO Studio & Care"}
             </h3>
             <p className="text-xs text-stone-500 leading-relaxed font-light">
-              Crafting calm, elevated living spaces across India with care and dedication.
+              {settings.contactSubtitle ||
+                "Crafting calm, elevated living spaces across India with care and dedication."}
             </p>
           </div>
 
@@ -56,8 +68,11 @@ export default function ContactPage() {
               <Mail className="h-4 w-4 text-amber-800 mt-0.5 shrink-0" />
               <div>
                 <strong className="block text-stone-900">Email Concierge</strong>
-                <a href="mailto:care@lumerodecor.com" className="hover:underline">
-                  care@lumerodecor.com
+                <a
+                  href={`mailto:${settings.supportEmail || "care@lumerodecor.com"}`}
+                  className="hover:underline text-stone-700"
+                >
+                  {settings.supportEmail || "care@lumerodecor.com"}
                 </a>
               </div>
             </div>
@@ -66,7 +81,10 @@ export default function ContactPage() {
               <Phone className="h-4 w-4 text-amber-800 mt-0.5 shrink-0" />
               <div>
                 <strong className="block text-stone-900">Phone Assistance</strong>
-                <span>+91 98765 43210 (Mon-Sat, 10am - 7pm IST)</span>
+                <span>
+                  {settings.supportPhone || "+91 98765 43210"}
+                  {settings.supportHours ? ` (${settings.supportHours})` : ""}
+                </span>
               </div>
             </div>
 
@@ -74,15 +92,7 @@ export default function ContactPage() {
               <Clock className="h-4 w-4 text-amber-800 mt-0.5 shrink-0" />
               <div>
                 <strong className="block text-stone-900">Response Window</strong>
-                <span>Usually within 4 business hours</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-amber-800 mt-0.5 shrink-0" />
-              <div>
-                <strong className="block text-stone-900">Design Studio & Fulfillment</strong>
-                <span>Indiranagar, Bengaluru, Karnataka 560038</span>
+                <span>{settings.responseWindow || "Usually within 4 business hours"}</span>
               </div>
             </div>
           </div>

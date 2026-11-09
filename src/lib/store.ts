@@ -994,6 +994,10 @@ export const defaultStoreSettings: StoreSettings = {
   standardShippingFee: 150,
   supportEmail: "care@lumerodecor.com",
   supportPhone: "+91 98765 43210",
+  supportHours: "Mon-Sat, 10am - 7pm IST",
+  responseWindow: "Usually within 4 business hours",
+  contactSubtitle: "Crafting calm, elevated living spaces across India with care and dedication.",
+  adminWhatsApp: "+91 98765 43210",
 };
 
 export async function getStoreSettings(): Promise<StoreSettings> {

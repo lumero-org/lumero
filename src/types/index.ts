@@ -194,8 +194,12 @@ export interface ShippingSettings {
 export interface StoreSettings {
   storeName: string;
   currency: string;
-  freeShippingThreshold: number;
-  standardShippingFee: number;
+  freeShippingThreshold?: number;
+  standardShippingFee?: number;
   supportEmail: string;
   supportPhone: string;
+  supportHours?: string;
+  responseWindow?: string;
+  contactSubtitle?: string;
+  adminWhatsApp?: string;
 }

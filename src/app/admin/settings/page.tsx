@@ -8,6 +8,10 @@ import {
   Save,
   Truck,
   CheckCircle2,
+  Mail,
+  Phone,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,32 +20,40 @@ import {
   getShippingSettings,
   saveShippingSettings,
   DEFAULT_SHIPPING_SETTINGS,
+  getStoreSettings,
+  saveStoreSettings,
+  defaultStoreSettings,
 } from "@/lib/store";
-import { ShippingSettings } from "@/types";
+import { ShippingSettings, StoreSettings } from "@/types";
 
 export default function AdminSettingsPage() {
-  const [storeSettings, setStoreSettings] = useState({
-    storeName: "LUMERO Décor",
-    currency: "INR (₹)",
-    supportEmail: "care@lumerodecor.com",
-    supportPhone: "+91 98765 43210",
-    adminWhatsApp: "+91 98765 43210",
-  });
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultStoreSettings);
   const [shippingSettings, setShippingSettings] =
     useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    getAdminWhatsAppNumber().then((phone) => {
-      if (phone) {
-        setStoreSettings((prev) => ({ ...prev, adminWhatsApp: phone }));
+    async function load() {
+      try {
+        const [loadedStore, loadedShipping, phone] = await Promise.all([
+          getStoreSettings(),
+          getShippingSettings(),
+          getAdminWhatsAppNumber(),
+        ]);
+        if (loadedStore) {
+          setStoreSettings({
+            ...loadedStore,
+            adminWhatsApp: phone || loadedStore.adminWhatsApp || "+91 98765 43210",
+          });
+        }
+        if (loadedShipping) {
+          setShippingSettings(loadedShipping);
+        }
+      } catch (e) {
+        console.error("Failed to load settings:", e);
       }
-    });
-    getShippingSettings().then((settings) => {
-      if (settings) {
-        setShippingSettings(settings);
-      }
-    });
+    }
+    load();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -49,18 +61,16 @@ export default function AdminSettingsPage() {
     setIsSaving(true);
     try {
       await Promise.all([
-        saveAdminWhatsAppNumber(storeSettings.adminWhatsApp),
+        saveStoreSettings(storeSettings),
         saveShippingSettings(shippingSettings),
+        saveAdminWhatsAppNumber(storeSettings.adminWhatsApp || ""),
       ]);
       toast.success("Settings Saved", {
-        description: "Store shipping rules & WhatsApp details updated successfully.",
+        description: "Store information, contact details, and shipping rules updated successfully.",
       });
     } catch {
       toast.error("Failed to save settings");
     } finally {
-      setIsSaving(false);
-    }
-  };
       setIsSaving(false);
     }
   };
@@ -82,15 +92,20 @@ export default function AdminSettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: General Configuration */}
         <div className="lg:col-span-7 space-y-6">
-          <form onSubmit={handleSave} className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-4">
-            <h3 className="font-serif text-base font-medium text-stone-900 border-b border-stone-200 pb-3">
-              Store Logistics & Policies
-            </h3>
+          <form onSubmit={handleSave} className="rounded-2xl bg-white p-6 border border-stone-200 shadow-2xs space-y-5">
+            <div>
+              <h3 className="font-serif text-base font-medium text-stone-900 border-b border-stone-200 pb-2">
+                Store Identity & Contact Details
+              </h3>
+              <p className="text-[11px] text-stone-500 mt-1">
+                These contact channels are displayed dynamically on your customer contact page.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Brand Name
+                  Brand / Studio Name
                 </label>
                 <input
                   type="text"
@@ -115,8 +130,9 @@ export default function AdminSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Concierge Support Email
+                <label className="block text-xs font-medium text-stone-700 mb-1 flex items-center gap-1">
+                  <Mail className="h-3 w-3 text-amber-800" />
+                  <span>Concierge Support Email</span>
                 </label>
                 <input
                   type="email"
@@ -124,13 +140,15 @@ export default function AdminSettingsPage() {
                   onChange={(e) =>
                     setStoreSettings({ ...storeSettings, supportEmail: e.target.value })
                   }
+                  placeholder="care@lumerodecor.com"
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">
-                  Customer Support Phone
+                <label className="block text-xs font-medium text-stone-700 mb-1 flex items-center gap-1">
+                  <Phone className="h-3 w-3 text-amber-800" />
+                  <span>Customer Support Phone</span>
                 </label>
                 <input
                   type="text"
@@ -138,6 +156,54 @@ export default function AdminSettingsPage() {
                   onChange={(e) =>
                     setStoreSettings({ ...storeSettings, supportPhone: e.target.value })
                   }
+                  placeholder="+91 98765 43210"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1 flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-amber-800" />
+                  <span>Phone Assistance Hours</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.supportHours || ""}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, supportHours: e.target.value })
+                  }
+                  placeholder="Mon-Sat, 10am - 7pm IST"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-800" />
+                  <span>Response Window</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.responseWindow || ""}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, responseWindow: e.target.value })
+                  }
+                  placeholder="Usually within 4 business hours"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-stone-700 mb-1">
+                  Contact Page Description / Subtitle
+                </label>
+                <textarea
+                  rows={2}
+                  value={storeSettings.contactSubtitle || ""}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, contactSubtitle: e.target.value })
+                  }
+                  placeholder="Crafting calm, elevated living spaces across India with care and dedication."
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
                 />
               </div>
