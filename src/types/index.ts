@@ -10,6 +10,7 @@ export interface Product {
   description: string;
   price: number;
   compare_at_price?: number;
+  shipping_fee?: number;
   category_id: string;
   category_name?: string;
   stock_quantity: number;
@@ -188,4 +189,13 @@ export interface ShippingSettings {
   threshold_amount: number;       // When order subtotal >= threshold_amount, shipping is free (0)
   below_threshold_charge: number; // Delivery charge when subtotal < threshold_amount
   fixed_charge: number;           // Flat delivery charge for all orders
+}
+
+export interface StoreSettings {
+  storeName: string;
+  currency: string;
+  freeShippingThreshold: number;
+  standardShippingFee: number;
+  supportEmail: string;
+  supportPhone: string;
 }

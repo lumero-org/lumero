@@ -33,9 +33,14 @@ declare global {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, shippingFee, clearCart } = useCart();
+  const { items, subtotal, shippingFee, clearCart, refreshCart } = useCart();
   const { user } = useAuth();
 
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
+
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">("razorpay");
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasSavedAddress, setHasSavedAddress] = useState(false);
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(true);

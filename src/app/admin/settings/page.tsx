@@ -61,6 +61,9 @@ export default function AdminSettingsPage() {
       setIsSaving(false);
     }
   };
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">

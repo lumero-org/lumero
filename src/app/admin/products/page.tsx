@@ -56,6 +56,7 @@ function AdminProductsContent() {
       description: "",
       price: 1999,
       compare_at_price: 2499,
+      shipping_fee: undefined,
       category_id: categories[0]?.id || "lighting",
       category_name: categories[0]?.name || "Lighting",
       stock_quantity: 10,
@@ -114,6 +115,13 @@ function AdminProductsContent() {
         ...editingProduct,
         name: editingProduct.name,
         price: Number(editingProduct.price),
+        compare_at_price: editingProduct.compare_at_price ? Number(editingProduct.compare_at_price) : undefined,
+        shipping_fee:
+          editingProduct.shipping_fee !== undefined &&
+          editingProduct.shipping_fee !== null &&
+          String(editingProduct.shipping_fee) !== ""
+            ? Number(editingProduct.shipping_fee)
+            : undefined,
         category_name: cat?.name || editingProduct.category_name || "Décor",
       });
 
@@ -472,6 +480,28 @@ function AdminProductsContent() {
                     }
                     className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-xs focus:border-stone-900 focus:outline-hidden"
                   />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-stone-700 mb-1">
+                    Individual Shipping Price (₹) (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Leave empty to use store default shipping rule"
+                    value={editingProduct.shipping_fee ?? ""}
+                    onChange={(e) =>
+                      setEditingProduct({
+                        ...editingProduct,
+                        shipping_fee: e.target.value === "" ? undefined : parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-xs focus:border-stone-900 focus:outline-hidden"
+                  />
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    If set, this custom shipping price applies to this product (unless order qualifies for free delivery).
+                  </p>
                 </div>
               </div>
 

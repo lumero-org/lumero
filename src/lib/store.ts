@@ -12,6 +12,7 @@ import {
   OfferBannerContent,
   ShippingAddress,
   ShippingSettings,
+  StoreSettings,
 } from "@/types";
 import {
   initialHomeCMS,
@@ -29,6 +30,7 @@ const STORAGE_KEYS = {
   OFFER_BANNER: "lumero_offer_banner_v1",
   WHY_CHOOSE: "lumero_why_choose_v1",
   CURRENT_USER: "lumero_current_user_v1",
+  SETTINGS: "lumero_settings_v1",
 };
 
 // -------------------------------------------------------------
@@ -118,6 +120,7 @@ export async function saveProduct(product: Partial<Product> & { name: string; pr
     description: product.description || "",
     price: Number(product.price),
     compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+    shipping_fee: typeof product.shipping_fee === "number" ? product.shipping_fee : undefined,
     category_id: product.category_id || "",
     category_name: product.category_name || "Décor",
     stock_quantity: typeof product.stock_quantity === "number" ? product.stock_quantity : 10,
@@ -189,6 +192,10 @@ export async function saveProduct(product: Partial<Product> & { name: string; pr
     }
   }
 
+  if (typeof window !== "undefined") {
+    localStorage.setItem("lumero_catalog_updated_at", Date.now().toString());
+    window.dispatchEvent(new Event("lumero_catalog_updated"));
+  }
   return fullProduct;
 }
 
@@ -236,6 +243,10 @@ export async function deleteProduct(productId: string): Promise<boolean> {
     }
   }
 
+  if (typeof window !== "undefined") {
+    localStorage.setItem("lumero_catalog_updated_at", Date.now().toString());
+    window.dispatchEvent(new Event("lumero_catalog_updated"));
+  }
   return true;
 }
 
@@ -954,7 +965,9 @@ export async function getShippingSettings(): Promise<ShippingSettings> {
 export async function saveShippingSettings(settings: ShippingSettings): Promise<boolean> {
   saveToLocal("lumero_shipping_settings_v1", settings);
   if (typeof window !== "undefined") {
+    localStorage.setItem("lumero_catalog_updated_at", Date.now().toString());
     window.dispatchEvent(new CustomEvent("lumero_shipping_updated", { detail: settings }));
+    window.dispatchEvent(new Event("lumero_catalog_updated"));
   }
   if (isSupabaseConfigured() && supabase) {
     try {
@@ -969,4 +982,57 @@ export async function saveShippingSettings(settings: ShippingSettings): Promise<
     }
   }
   return true;
+}
+
+// -------------------------------------------------------------
+// STORE SETTINGS & LOGISTICS
+// -------------------------------------------------------------
+export const defaultStoreSettings: StoreSettings = {
+  storeName: "LUMERO Décor",
+  currency: "INR (₹)",
+  freeShippingThreshold: 1999,
+  standardShippingFee: 150,
+  supportEmail: "care@lumerodecor.com",
+  supportPhone: "+91 98765 43210",
+};
+
+export async function getStoreSettings(): Promise<StoreSettings> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("cms_content")
+        .select("content")
+        .eq("key", "store_settings")
+        .single();
+      if (!error && data?.content) {
+        return { ...defaultStoreSettings, ...data.content };
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return getFromLocal<StoreSettings>(STORAGE_KEYS.SETTINGS, defaultStoreSettings);
+}
+
+export async function saveStoreSettings(settings: StoreSettings): Promise<StoreSettings> {
+  saveToLocal(STORAGE_KEYS.SETTINGS, settings);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("lumero_catalog_updated_at", Date.now().toString());
+    window.dispatchEvent(new Event("lumero_settings_updated"));
+    window.dispatchEvent(new Event("lumero_catalog_updated"));
+  }
+
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      await supabase.from("cms_content").upsert({
+        key: "store_settings",
+        content: settings,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn("Supabase saveStoreSettings error:", e);
+    }
+  }
+
+  return settings;
 }
