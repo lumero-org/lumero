@@ -997,6 +997,7 @@ export const defaultStoreSettings: StoreSettings = {
   supportHours: "Mon-Sat, 10am - 7pm IST",
   responseWindow: "Usually within 4 business hours",
   contactSubtitle: "Crafting calm, elevated living spaces across India with care and dedication.",
+  locationAddress: "",
   adminWhatsApp: "+91 98765 43210",
 };
 

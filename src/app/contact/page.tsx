@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Mail, Phone, Clock, Send, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, Clock, Send, CheckCircle2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { getStoreSettings, defaultStoreSettings } from "@/lib/store";
 import { StoreSettings } from "@/types";
@@ -17,11 +17,23 @@ export default function ContactPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
-    getStoreSettings().then((loaded) => {
-      if (loaded) {
-        setSettings(loaded);
-      }
-    });
+    let isMounted = true;
+    const loadSettings = () => {
+      getStoreSettings().then((loaded) => {
+        if (loaded && isMounted) {
+          setSettings(loaded);
+        }
+      });
+    };
+    loadSettings();
+
+    window.addEventListener("lumero_settings_updated", loadSettings);
+    window.addEventListener("storage", loadSettings);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("lumero_settings_updated", loadSettings);
+      window.removeEventListener("storage", loadSettings);
+    };
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,6 +107,18 @@ export default function ContactPage() {
                 <span>{settings.responseWindow || "Usually within 4 business hours"}</span>
               </div>
             </div>
+
+            {settings.locationAddress && (
+              <div className="flex items-start gap-3 pt-1 border-t border-stone-100">
+                <MapPin className="h-4 w-4 text-amber-800 mt-0.5 shrink-0" />
+                <div>
+                  <strong className="block text-stone-900">Studio &amp; Location</strong>
+                  <p className="whitespace-pre-line text-stone-600 leading-relaxed">
+                    {settings.locationAddress}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

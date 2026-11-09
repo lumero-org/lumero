@@ -201,5 +201,6 @@ export interface StoreSettings {
   supportHours?: string;
   responseWindow?: string;
   contactSubtitle?: string;
+  locationAddress?: string;
   adminWhatsApp?: string;
 }

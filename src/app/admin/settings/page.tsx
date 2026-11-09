@@ -9,6 +9,7 @@ import {
   Phone,
   Clock,
   Sparkles,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -185,6 +186,25 @@ export default function AdminSettingsPage() {
                   placeholder="Usually within 4 business hours"
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-stone-700 mb-1 flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-amber-800" />
+                  <span>Studio &amp; Store Location Address</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={storeSettings.locationAddress || ""}
+                  onChange={(e) =>
+                    setStoreSettings({ ...storeSettings, locationAddress: e.target.value })
+                  }
+                  placeholder="e.g. 104, Indiranagar 100ft Road, Defence Colony, Bengaluru, Karnataka 560038"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:border-stone-900 focus:outline-hidden"
+                />
+                <p className="mt-1 text-[11px] text-stone-500">
+                  Displayed on the storefront customer contact page under Studio &amp; Location.
+                </p>
               </div>
 
               <div className="sm:col-span-2">
