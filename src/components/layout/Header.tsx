@@ -17,9 +17,35 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { getHomeCMS, getProducts } from "@/lib/store";
+import { getHomeCMS, getProducts, getShippingSettings } from "@/lib/store";
 import { CustomerAuthModal } from "@/components/auth/CustomerAuthModal";
-import { Product } from "@/types";
+import { Product, ShippingSettings } from "@/types";
+
+function formatAnnouncement(template?: string, shipping?: ShippingSettings): string {
+  const threshold = shipping?.threshold_amount ?? 1999;
+  const isThreshold = shipping?.method !== "fixed";
+
+  if (!isThreshold) {
+    if (template && !template.includes("1,999") && !template.toLowerCase().includes("orders over")) {
+      return template;
+    }
+    return "Pan-India Express Delivery • Handcrafted with Soul";
+  }
+
+  if (template) {
+    if (/Orders Over ₹[0-9,]+/i.test(template)) {
+      return template.replace(/Orders Over ₹[0-9,]+/i, `Orders Over ₹${threshold.toLocaleString()}`);
+    }
+    if (/₹1,999/g.test(template)) {
+      return template.replace(/₹1,999/g, `₹${threshold.toLocaleString()}`);
+    }
+    if (/₹[0-9,]+/i.test(template) && template.toLowerCase().includes("orders over")) {
+      return template.replace(/₹[0-9,]+/i, `₹${threshold.toLocaleString()}`);
+    }
+  }
+
+  return `Complimentary Pan-India Express Delivery on Orders Over ₹${threshold.toLocaleString()} • Handcrafted with Soul`;
+}
 
 export function Header() {
   const router = useRouter();
@@ -37,11 +63,38 @@ export function Header() {
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
 
   useEffect(() => {
-    getHomeCMS().then((cms) => {
-      if (cms?.announcement_bar) {
-        setAnnouncement(cms.announcement_bar);
+    let isMounted = true;
+
+    const refreshAnnouncement = async (overrideShipping?: ShippingSettings) => {
+      try {
+        const [cms, shipping] = await Promise.all([
+          getHomeCMS(),
+          overrideShipping ? Promise.resolve(overrideShipping) : getShippingSettings(),
+        ]);
+        if (!isMounted) return;
+        setAnnouncement(formatAnnouncement(cms?.announcement_bar, shipping));
+      } catch (e) {
+        console.warn("Failed to load dynamic announcement:", e);
       }
-    });
+    };
+
+    refreshAnnouncement();
+
+    const handleShippingEvent = (e?: Event) => {
+      const detail = (e && "detail" in e && (e as CustomEvent).detail) as ShippingSettings | undefined;
+      refreshAnnouncement(detail);
+    };
+
+    window.addEventListener("lumero_shipping_updated", handleShippingEvent);
+    window.addEventListener("lumero_catalog_updated", () => refreshAnnouncement());
+    window.addEventListener("lumero_settings_updated", () => refreshAnnouncement());
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("lumero_shipping_updated", handleShippingEvent);
+      window.removeEventListener("lumero_catalog_updated", () => refreshAnnouncement());
+      window.removeEventListener("lumero_settings_updated", () => refreshAnnouncement());
+    };
   }, []);
 
   // Pre-load products when search is opened
