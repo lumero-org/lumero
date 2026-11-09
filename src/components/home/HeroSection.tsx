@@ -83,6 +83,11 @@ export function HeroSection({
 
   // 2. EMPTY STATE (When no hero slides are configured)
   if (displaySlides.length === 0) {
+    // If not in CMS preview mode, do not display anything to storefront end users to prevent admin exposure
+    if (!isPreview) {
+      return null;
+    }
+
     return (
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         <div

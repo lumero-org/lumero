@@ -157,11 +157,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="hover:text-amber-400 transition font-medium">
-                  Admin Portal &amp; CMS
-                </Link>
-              </li>
-              <li>
                 <span className="text-stone-500">Shipping Policy</span>
               </li>
               <li>
@@ -200,9 +195,8 @@ export function Footer() {
             >
               <span>Shop Collections</span>
               <ChevronDown
-                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${
-                  openSection === "shop" ? "rotate-180 text-amber-400" : ""
-                }`}
+                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${openSection === "shop" ? "rotate-180 text-amber-400" : ""
+                  }`}
               />
             </button>
             {openSection === "shop" && (
@@ -252,9 +246,8 @@ export function Footer() {
             >
               <span>Company</span>
               <ChevronDown
-                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${
-                  openSection === "company" ? "rotate-180 text-amber-400" : ""
-                }`}
+                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${openSection === "company" ? "rotate-180 text-amber-400" : ""
+                  }`}
               />
             </button>
             {openSection === "company" && (
@@ -268,11 +261,6 @@ export function Footer() {
                   <li>
                     <Link href="/contact" className="hover:text-white transition block py-0.5">
                       Customer Concierge
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/admin" className="hover:text-amber-400 transition font-medium block py-0.5">
-                      Admin Portal &amp; CMS
                     </Link>
                   </li>
                   <li>
@@ -295,9 +283,8 @@ export function Footer() {
             >
               <span>Assurance &amp; Guarantee</span>
               <ChevronDown
-                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${
-                  openSection === "assurance" ? "rotate-180 text-amber-400" : ""
-                }`}
+                className={`h-4 w-4 text-stone-400 transition-transform duration-300 ${openSection === "assurance" ? "rotate-180 text-amber-400" : ""
+                  }`}
               />
             </button>
             {openSection === "assurance" && (
