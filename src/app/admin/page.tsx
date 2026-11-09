@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   TrendingUp,
   ShoppingBag,
@@ -9,13 +10,19 @@ import {
   AlertTriangle,
   ArrowRight,
   Plus,
+  Eye,
+  X,
 } from "lucide-react";
-import { getProducts, getOrders } from "@/lib/store";
-import { Product, Order } from "@/types";
+import { getProducts, getOrders, updateOrderStatus } from "@/lib/store";
+import { Product, Order, OrderStatus } from "@/types";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { toast } from "sonner";
 
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -29,6 +36,57 @@ export default function AdminDashboardPage() {
     }
     load();
   }, []);
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      toast.success("Order Status Updated", {
+        description: `Order updated to ${newStatus.toUpperCase()}`,
+      });
+
+      if (newStatus === "shipped") {
+        const orderObj = orders.find((o) => o.id === orderId) || selectedOrder;
+        if (orderObj) {
+          fetch("/api/email/order-shipped", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              order: { ...orderObj, order_status: "shipped" },
+              courierName: "Blue Dart / Delhivery Express",
+            }),
+          }).catch((err) => console.warn("Shipping email notice:", err));
+        }
+      }
+
+      const refreshed = await getOrders();
+      setOrders(refreshed);
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder((prev) => (prev ? { ...prev, order_status: newStatus } : null));
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update status";
+      toast.error("Update error", { description: msg });
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!orderToCancel) return;
+    try {
+      await updateOrderStatus(orderToCancel.id, "cancelled");
+      toast.success("Order Cancelled", {
+        description: `Order ${orderToCancel.order_number} has been cancelled.`,
+      });
+      const refreshed = await getOrders();
+      setOrders(refreshed);
+      if (selectedOrder?.id === orderToCancel.id) {
+        setSelectedOrder((prev) => (prev ? { ...prev, order_status: "cancelled" } : null));
+      }
+    } catch {
+      toast.error("Failed to cancel order");
+    } finally {
+      setOrderToCancel(null);
+    }
+  };
 
   const totalRevenue = orders.reduce((sum, ord) => sum + ord.total_amount, 0);
   const lowStockProducts = products.filter((p) => p.stock_quantity <= 4);
@@ -260,6 +318,7 @@ export default function AdminDashboardPage() {
                   <th className="px-6 py-3">Total</th>
                   <th className="px-6 py-3">Payment</th>
                   <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -296,6 +355,15 @@ export default function AdminDashboardPage() {
                         {ord.order_status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setSelectedOrder(ord)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-stone-100 hover:bg-stone-200 px-3 py-1.5 text-xs font-medium text-stone-800 transition cursor-pointer"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Inspect</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -303,6 +371,158 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Order Details Drawer / Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs"
+            onClick={() => setSelectedOrder(null)}
+          />
+
+          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-stone-200 animate-in fade-in zoom-in-95 space-y-6">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+              <div>
+                <span className="font-mono text-xs text-stone-400">
+                  {selectedOrder.order_number}
+                </span>
+                <h3 className="font-serif text-lg font-medium text-stone-900">
+                  Order Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-full p-1.5 text-stone-400 hover:bg-stone-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Customer & Address Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl bg-stone-50 p-4 border border-stone-200 text-xs">
+              <div>
+                <strong className="block text-stone-900 font-serif mb-1">
+                  Recipient
+                </strong>
+                <p className="font-medium text-stone-800">{selectedOrder.customer_name}</p>
+                <p className="text-stone-500">{selectedOrder.customer_email}</p>
+                <p className="text-stone-500">{selectedOrder.customer_phone}</p>
+              </div>
+
+              <div>
+                <strong className="block text-stone-900 font-serif mb-1">
+                  Shipping Destination
+                </strong>
+                {typeof selectedOrder.shipping_address === "string" ? (
+                  <p className="text-stone-700">{selectedOrder.shipping_address}</p>
+                ) : selectedOrder.shipping_address ? (
+                  <>
+                    <p className="text-stone-700">{selectedOrder.shipping_address.address}</p>
+                    <p className="text-stone-700">
+                      {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state}
+                      {selectedOrder.shipping_address.postal_code ? ` - ${selectedOrder.shipping_address.postal_code}` : ""}
+                    </p>
+                    {selectedOrder.shipping_address.country && (
+                      <p className="text-stone-500">{selectedOrder.shipping_address.country}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-stone-500">Not provided</p>
+                )}
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="space-y-3">
+              <h4 className="font-serif text-sm font-medium text-stone-900">
+                Ordered Products
+              </h4>
+              <div className="divide-y divide-stone-100 rounded-2xl border border-stone-200 p-2">
+                {selectedOrder.items.map((it, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-2">
+                    <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
+                      <Image
+                        src={it.product_image || "/placeholder.png"}
+                        alt={it.product_name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-serif text-xs font-medium text-stone-900 block">
+                        {it.product_name}
+                      </span>
+                      <span className="text-[11px] text-stone-400">
+                        Qty: {it.quantity} × ₹{it.price.toLocaleString()}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-xs text-stone-900">
+                      ₹{it.total.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Financial summary */}
+            <div className="rounded-2xl bg-stone-50 p-4 border border-stone-200 space-y-1 text-xs text-stone-600">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>₹{selectedOrder.subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Shipping:</span>
+                <span>
+                  {selectedOrder.shipping_fee === 0 ? "Free" : `₹${selectedOrder.shipping_fee}`}
+                </span>
+              </div>
+              <div className="flex justify-between font-serif font-semibold text-sm text-stone-950 border-t border-stone-200 pt-2">
+                <span>Total Amount:</span>
+                <span>₹{selectedOrder.total_amount.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Status changer in modal */}
+            <div className="flex items-center justify-between border-t border-stone-200 pt-4">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium text-stone-700">Update Status:</span>
+                <select
+                  value={selectedOrder.order_status}
+                  onChange={(e) =>
+                    handleStatusChange(selectedOrder.id, e.target.value as OrderStatus)
+                  }
+                  className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium cursor-pointer"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {selectedOrder.order_status !== "cancelled" && (
+                <button
+                  onClick={() => setOrderToCancel(selectedOrder)}
+                  className="text-xs font-medium text-rose-600 hover:underline cursor-pointer"
+                >
+                  Cancel Order
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(orderToCancel)}
+        onClose={() => setOrderToCancel(null)}
+        onConfirm={handleConfirmCancel}
+        title="Cancel This Order?"
+        description={`Are you sure you want to cancel order ${orderToCancel?.order_number}? This will mark the order as cancelled.`}
+        confirmText="Yes, Cancel Order"
+      />
     </div>
   );
 }
